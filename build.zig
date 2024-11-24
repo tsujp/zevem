@@ -1,5 +1,7 @@
 const std = @import("std");
 
+// Foo
+
 // @import("foo") -- imports _module_ foo.
 // packages are pieces of code downloaded and/or depended on in the Zig package manager
 // libraries are explicitly C-style static or dynamic libraries (.so, .dll) etc
@@ -16,7 +18,7 @@ pub fn build(b: *std.Build) void {
 
     const bin = b.addExecutable(.{
         .name = "zevem",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -28,6 +30,10 @@ pub fn build(b: *std.Build) void {
     //   `zig build --help`) using `b.step()`.
     const run_cmd = b.addRunArtifact(bin);
 
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
     // Creates a build step (visible in `zig build --help`) and declares a
     //   dependency on the `run_cmd` run step. Now executing `zig build run`
     //   allows us to build and execute `bin`.
@@ -36,7 +42,7 @@ pub fn build(b: *std.Build) void {
 
     // Creates a test step which will build the test executable (but not run it).
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
