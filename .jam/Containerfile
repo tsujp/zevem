@@ -1,0 +1,82 @@
+# ARG VERSION=12.8
+# FROM debian:$VERSION
+ARG VERSION=41
+FROM fedora:$VERSION
+
+ARG VERSION # Unless specified will inherit value as set at top of file.
+ARG PROJECT_NAME=zevem
+ARG ZIG_VERSION=0.13.0
+
+LABEL sh.jammy.name="$PROJECT_NAME" \
+	  sh.jammy.summary="Image with $PROJECT_NAME project dependencies" \
+	  sh.jammy.box="true"
+
+ENV JAM_PROJECT="$PROJECT_NAME"
+
+# COPY .jam/*.txt /tmp/
+
+# RUN apt-get update -y && xargs -n 1 apt-get install -y < /tmp/apt.txt && apt-get clean
+# RUN dnf update -y && xargs -n 1 dnf install -y < /tmp/apt.txt && dnf clean all
+	# && adduser $USERNAME \
+	# && usermod -aG wheel $USERNAME
+	# && usermod -V 524288-589824 $USERNAME \
+	# && usermod -W 524288-589824 $USERNAME
+
+# Getting a list of packages from a text file is cute but it's arguably pointless indirection here.
+
+RUN dnf update -y && dnf install -y \
+	git \
+	ripgrep \
+	rsync \
+	htop \
+	curl \
+	minisign \
+	man \
+	which \
+	lsof \
+	\
+	&& dnf clean all
+	# zig-"$ZIG_VERSION" \
+	# zig-doc-"$ZIG_VERSION" \
+	# zig-libs-"$ZIG_VERSION" \
+	# \
+	# && dnf clean all
+
+# TODO: Install zls (download from git and verify with minisign).
+# TODO: Install eat terminfo.
+
+# -------------------------------------------- Namespace mapping.
+# Without the following magic adduser namespace mapping will break horribly. If you do NOT want to use it one alternative is that the Containerfile must specify no USER at all, and when calling `run` on podman-machine as user `core` `--userns keep-id:uid=501` must be passed.
+
+# UID for this account must match macOS UID that is running podman-machine (vm) as by default Podman will set up namespace mapping to said UID which is also (from macOS) default: 501.
+ARG USERNAME=jammy
+RUN adduser \
+	--groups wheel \
+	--home-dir /home/jammy \
+	--password '' \
+	--shell /bin/bash \
+	--uid 501 \
+	--user-group \
+	jammy
+# -------------------------------------------- /
+
+# XXX: Temporary until zig 0.14.0 released.
+# https://ziglang.org/builds/zig-linux-aarch64-0.14.0-dev.2851+b074fb7dd.tar.xz
+# TODO: zls for zig 0.14.0-dev also
+USER $USERNAME
+COPY .jam/zig-linux-aarch64-0.14.0-dev.2851+b074fb7dd.tar.xz /tmp/zig.tar.xz
+RUN mkdir -p /home/jammy/bin
+RUN tar -xf /tmp/zig.tar.xz -C /home/jammy/bin --strip-components=1
+RUN touch /home/jammy/.tramp_history
+# RUN rm -f /tmp/zig.tar.xz
+
+WORKDIR /home/$USERNAME/project
+
+USER $USERNAME
+
+CMD ["/bin/bash", "-l"]
+
+# ls -lan
+# ls -la@
+# podman top -l capeff
+# podman top -l user uid huser group hgroups
