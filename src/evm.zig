@@ -43,25 +43,53 @@ pub const EVM = struct {
 
     pub fn execute(self: *EVM, rom: []const u8) !void {
         // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
-        return sw: switch (decodeOp(rom[self.ip])) {
+        _ = sw: switch (decodeOp(rom[self.ip])) {
             .STOP => {
                 print("Stopping {}\n", .{self.ip});
                 self.ip += 1;
-                continue :sw decodeOp(rom[self.ip]);
+
+                // TODO: Here and for other halt opcodes return with error union so we can execute appropriate post-halt actions.
+                return;
             },
             .ADD => {
-                print("Adding\n", .{});
                 self.ip += 1;
+                print("Add\n", .{});
+
+                try self.stack.append(self.stack.pop() +% self.stack.pop());
+                print("----> {}\n", .{self.stack.pop()});
+
                 continue :sw decodeOp(rom[self.ip]);
             },
             .MUL => {
                 print("Multiplying\n", .{});
+
+                try self.stack.append(self.stack.pop() * self.stack.pop());
+
                 self.ip += 1;
                 continue :sw decodeOp(rom[self.ip]);
             },
+            .SUB => {},
+            .DIV => {},
+            .SDIV => {},
+            .MOD => {},
+            .SMOD => {},
+            .ADDMOD => {},
+            .MULMOD => {},
+            .EXP => {},
+            .SIGNEXTEND => {},
             .PUSH1 => {
                 print("Pushing\n", .{});
+
                 self.ip += 1;
+                continue :sw decodeOp(rom[self.ip]);
+            },
+            .PUSH32 => {
+                self.ip += 1;
+                print("Push32 / ip {}\n", .{self.ip});
+
+                try self.stack.append(std.mem.readInt(u256, rom[self.ip..][0..32], .big));
+                self.ip += 32;
+
                 continue :sw decodeOp(rom[self.ip]);
             },
             // TEMPORARY.
