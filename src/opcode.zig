@@ -188,7 +188,7 @@ fn MakeOpCodes(comptime defs: anytype) type {
             .tag_type = u8,
             .fields = fields,
             .decls = &[_]std.builtin.Type.Declaration{},
-            .is_exhaustive = false,
+            .is_exhaustive = true,
         },
     });
 }
