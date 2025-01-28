@@ -8,10 +8,20 @@ const WORD = u256;
 // TODO: EVM specified big-endian.
 // TODO: EVM single allocation at start (configurable size or avoid using that strategy). Pass in desired context along with bytecode for easier simulation (e.g. devs, EIPs etc). For now: make a VM with pre-canned bytecode.
 
+const TraceEndline = enum {
+    endln,
+    cntln,
+};
 
-// TODO: Place these elsewhere, perhaps use a better implementation pattern, and also need to eventually decide on some debug logging framework or is keeping this stuff inline fine.
-fn debugLogBasic(op: OpCode, ip: usize) void {
-    print("{x:0>6}  {s: <6} {X:0>2}\n", .{ ip, @tagName(op), @intFromEnum(op) });
+// XXX: Could have an instruction struct/enum/tagged-union which @calls and inlines some so OP_PUSH3 finds the associated (internal) instruction which has the logic to execute OP_PUSH3 but also things like gas pricing, and any logging. Investigate later, feels too spaghetti for right now.
+// TODO: Better interface/implementation or just _stuff_ around tracing; idk. Do later even though it's extremely tempting to hack on cool comptime things now.
+fn traceOp(op: OpCode, ip: usize, endline: TraceEndline) void {
+    print("{x:0>6}\u{001b}[2m:{d}\u{001b}[0m  \u{001b}[2m{X:0>2}:\u{001b}[0m{s: <6}{s}", .{ ip, ip, @intFromEnum(op), @tagName(op), if (endline == .endln) "\n" else "\t" });
+}
+
+// Meant to print _additional_ information for PUSH1 ... PUSH32.
+fn traceOpPush(ip: usize, operand: WORD) void {
+    print("new_ip={d}, pushed=0x{X}\n", .{ ip, operand });
 }
 
 pub const EVM = struct {
@@ -51,14 +61,14 @@ pub const EVM = struct {
         // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
         _ = sw: switch (decodeOp(rom[self.ip])) {
             .STOP => {
-                debugLogBasic(decodeOp(rom[self.ip]), self.ip);
+                traceOp(decodeOp(rom[self.ip]), self.ip, .endln);
                 self.ip += 1;
 
                 // TODO: Here and for other halt opcodes return with error union so we can execute appropriate post-halt actions.
                 return;
             },
             .ADD => {
-                debugLogBasic(decodeOp(rom[self.ip]), self.ip);
+                traceOp(decodeOp(rom[self.ip]), self.ip, .endln);
                 self.ip += 1;
 
                 try self.stack.append(self.stack.pop() +% self.stack.pop());
@@ -83,73 +93,46 @@ pub const EVM = struct {
             .MULMOD => {},
             .EXP => {},
             .SIGNEXTEND => {},
-            // TODO: I don't think ranges over enums are allowed here, can check later (simple example file elsewhere) not that important right now. It is funny that I end up unrolling this manually though.
             .PUSH0 => |op| {
-                debugLogBasic(op, self.ip);
+                traceOp(op, self.ip, .endln);
                 self.ip += 1;
 
                 try self.stack.append(0);
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            inline .PUSH1, .PUSH2, .PUSH3, .PUSH4, .PUSH5 => |op| {
-                debugLogBasic(op, self.ip);
+            // TODO: I don't think ranges over enums are allowed here, can check later (simple example file elsewhere) not that important right now. It is funny that I end up unrolling this manually though.
+            // zig fmt: off
+            inline .PUSH1,  .PUSH2,  .PUSH3,  .PUSH4,  .PUSH5,  .PUSH6,  .PUSH7,  .PUSH8,
+                   .PUSH9,  .PUSH10, .PUSH11, .PUSH12, .PUSH13, .PUSH14, .PUSH15, .PUSH16,  .PUSH17, .PUSH18, .PUSH19, .PUSH20, .PUSH21, .PUSH22, .PUSH23, .PUSH24,  .PUSH25, .PUSH26, .PUSH27, .PUSH28, .PUSH29, .PUSH30, .PUSH31, .PUSH32
+            // zig fmt: on
+            => |op| {
+                traceOp(op, self.ip, .cntln);
                 self.ip += 1;
 
+                // Offset vs PUSH0 is amount of bytes to read forward and push onto stack as
+                // this instructions operand.
                 const offset = @intFromEnum(op) - @intFromEnum(OpCode.PUSH0);
 
-                // XXX: Works fine if hardcoded offset value is '32' as a conincidence because 32 u8s = a u256.
-                // try self.stack.append(std.mem.readInt(u256, rom[self.ip..][0..32], .big));
-                try self.stack.append(std.mem.readInt(u256, rom[self.ip..][0..offset], .big));
+                const operand_bytes = rom[self.ip..][0..offset];
 
+                // std.mem.readInt does not 0-pad types less than requested size, so we construct and reify the `type` we need then upcast to WORD.
+                const operand = @as(WORD, std.mem.readInt(
+                    @Type(.{ .int = .{
+                        .signedness = .unsigned,
+                        .bits = 8 * operand_bytes.len,
+                    } }),
+                    operand_bytes,
+                    .big,
+                ));
+
+                traceOpPush(self.ip + offset, operand);
+
+                try self.stack.append(operand);
                 self.ip += offset;
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            // XXX: Non-inline attempt here.
-          //   .PUSH1,
-          //   .PUSH2,
-          //   .PUSH3,
-          //   .PUSH4,
-          //   .PUSH5,
-        // .PUSH6,
-          //   .PUSH7,
-          //.PUSH8,
-          //   .PUSH9,
-          //   .PUSH10,
-          // .PUSH11,
-          //   .PUSH12,
-          //   .PUSH13,
-          //   .PUSH14,
-          //   .PUSH15,
-          //   .PUSH16,
-          //   .PUSH17,
-          //   .PUSH18,
-          //   .PUSH19,
-          //   .PUSH20,
-          //   .PUSH21,
-          //   .PUSH22,
-          //   .PUSH23,
-          //   .PUSH24,
-          //   .PUSH25,
-          //   .PUSH26,
-          //   .PUSH27,
-          //   .PUSH28,
-          //   .PUSH29,
-          //   .PUSH30,
-          //   .PUSH31,
-          //   .PUSH32 => |op| {
-          //       debugLogBasic(op, self.ip);
-          //       self.ip += 1;
-
-          //       const offset = @intFromEnum(op) - @intFromEnum(OpCode.PUSH0);
-
-          //       // try self.stack.append(std.mem.readInt(u256, rom[self.ip..][0..32], .big));
-          //       try self.stack.append(std.mem.readInt(u256, rom[self.ip..][0..offset], .big));
-          //       self.ip += offset;
-
-          //       continue :sw decodeOp(rom[self.ip]);
-          //   },
             // TEMPORARY.
             // TODO: Do we want catch unreachable here (in which case make OpCode enum non-exhaustive) or do we want a prong to prevent runtime crashes and log the unhandled opcode. I guess the latter.
             else => {
