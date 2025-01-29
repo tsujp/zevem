@@ -34,6 +34,9 @@ RUN dnf update -y && dnf install -y \
 	man \
 	which \
 	lsof \
+	acl \
+	diffutils \
+	just \
 	\
 	&& dnf clean all
 	# zig-"$ZIG_VERSION" \
@@ -63,12 +66,13 @@ RUN adduser \
 # XXX: Temporary until zig 0.14.0 released.
 # https://ziglang.org/builds/zig-linux-aarch64-0.14.0-dev.2851+b074fb7dd.tar.xz
 # TODO: zls for zig 0.14.0-dev also
-USER $USERNAME
 COPY .jam/zig-linux-aarch64-0.14.0-dev.2851+b074fb7dd.tar.xz /tmp/zig.tar.xz
+RUN chown 501:1000 /tmp/zig.tar.xz
+USER $USERNAME
 RUN mkdir -p /home/jammy/bin
 RUN tar -xf /tmp/zig.tar.xz -C /home/jammy/bin --strip-components=1
 RUN touch /home/jammy/.tramp_history
-# RUN rm -f /tmp/zig.tar.xz
+RUN rm -f /tmp/zig.tar.xz
 
 WORKDIR /home/$USERNAME/project
 
