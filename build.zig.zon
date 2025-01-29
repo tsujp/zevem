@@ -1,0 +1,13 @@
+.{
+    .name = "zevem",
+    .version = "0.0.0",
+    .minimum_zig_version = "0.14.0-dev.2851+b074fb7dd",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENCE",
+        "README.md",
+    },
+}
