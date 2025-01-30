@@ -77,7 +77,9 @@ pub const EVM = struct {
                 traceOp(op, self.ip, .endln);
                 self.ip += 1;
 
-                // TODO: Here and elsewhere with simpler modulo logic is this compiled to a bitwise AND? (and for others as appropriate).
+                // TODO: Here and for other similar log with traceStackTake
+
+                // TODO: Here and elsewhere with simpler modulo logic is this compiled to a bitwise AND? (and for others as appropriate). Use of this form involves peer type resolution so any overheads etc need to be investigated.
                 try self.stack.append(self.stack.pop() +% self.stack.pop());
 
                 continue :sw decodeOp(rom[self.ip]);
@@ -86,9 +88,8 @@ pub const EVM = struct {
                 traceOp(op, self.ip, .endln);
                 self.ip += 1;
 
-                try self.stack.append(self.stack.pop() * self.stack.pop());
+                try self.stack.append(self.stack.pop() *% self.stack.pop());
 
-                self.ip += 1;
                 continue :sw decodeOp(rom[self.ip]);
             },
             .SUB => {},
@@ -100,6 +101,24 @@ pub const EVM = struct {
             .MULMOD => {},
             .EXP => {},
             .SIGNEXTEND => {},
+            .LT => {},
+            .GT => {},
+            .SLT => {},
+            .SGT => {},
+            .EQ => {},
+            .ISZERO => {},
+            .AND => {},
+            .OR => {},
+            .XOR => {},
+            .NOT => {},
+            .BYTE => {},
+            .SHL => {},
+            .SHR => {},
+            .SAR => {},
+            .KECCAK256 => {},
+            //
+            // TODO: From op ADDRESS onwards
+            //
             .PUSH0 => |op| {
                 traceOp(op, self.ip, .endln);
                 self.ip += 1;
