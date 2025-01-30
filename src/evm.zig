@@ -92,7 +92,14 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            .SUB => {},
+            .SUB => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                try self.stack.append(self.stack.pop() -% self.stack.pop());
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
             .DIV => {},
             .SDIV => {},
             .MOD => {},

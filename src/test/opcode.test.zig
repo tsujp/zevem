@@ -24,3 +24,13 @@ test "basic MUL" {
     var b = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0200");
     try std.testing.expect(b.stack.pop() == 1);
 }
+
+test "basic SUB" {
+    // Two plus two is faw minus one dats free QUICK MAFFS!
+    var a = try basicBytecode("600160040300");
+    try std.testing.expect(a.stack.pop() == 3);
+
+    // Stack order is important, this is 1 - 4
+    var b = try basicBytecode("600460010300");
+    try std.testing.expect(b.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd);
+}
