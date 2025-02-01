@@ -90,3 +90,17 @@ test "basic SMOD" {
     var b = try basicBytecode("60037ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb0700");
     try std.testing.expect(b.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
 }
+
+test "basic ADDMOD" {
+    var a = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60047fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0800");
+    try std.testing.expect(a.stack.pop() == 4);
+
+    var b = try basicBytecode("600260027fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0800");
+    try std.testing.expect(b.stack.pop() == 1);
+}
+
+test "basic MULMOD" {
+    // (2^256 - 1) * (2^256 - 1) % 12 = 9
+    var a = try basicBytecode("60127fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0900");
+    try std.testing.expect(a.stack.pop() == 9);
+}

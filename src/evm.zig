@@ -162,8 +162,47 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            .ADDMOD => {},
-            .MULMOD => {},
+            .ADDMOD => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                // s[0, 1] = addition operands ; s[2] = denominator.
+                // TODO: Definitely a nicer way of implementing this outside of u257 and an intCast; optimise for that later.
+
+                const left: u257 = self.stack.pop();
+                const right = self.stack.pop();
+                const denominator = self.stack.pop();
+
+                if (denominator == 0) {
+                    try self.stack.append(0);
+                    continue :sw decodeOp(rom[self.ip]);
+                }
+
+                const result: u256 = @intCast((left + right) % denominator);
+                try self.stack.append(result);
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
+            .MULMOD => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                // s[0, 1] = addition operands ; s[2] = denominator.
+                // TODO: Ditto on modulo optimisation.
+                const left: u512 = self.stack.pop();
+                const right = self.stack.pop();
+                const denominator = self.stack.pop();
+
+                if (denominator == 0) {
+                    try self.stack.append(0);
+                    continue :sw decodeOp(rom[self.ip]);
+                }
+
+                const result: u256 = @intCast((left * right) % denominator);
+                try self.stack.append(result);
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
             .EXP => {},
             .SIGNEXTEND => {},
             .LT => {},
