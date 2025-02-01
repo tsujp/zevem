@@ -34,3 +34,20 @@ test "basic SUB" {
     var b = try basicBytecode("600460010300");
     try std.testing.expect(b.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd);
 }
+
+test "basic DIV" {
+    // Division by zero is zero.
+    var a = try basicBytecode("600060010400");
+    try std.testing.expect(a.stack.pop() == 0);
+
+    // Division of zero is zero.
+    var b = try basicBytecode("600160000400");
+    try std.testing.expect(b.stack.pop() == 0);
+
+    // Integer division: 10 / 3 = 3.
+    var c = try basicBytecode("6003600a0400");
+    try std.testing.expect(c.stack.pop() == 3);
+
+    var d = try basicBytecode("60077fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0400");
+    try std.testing.expect(d.stack.pop() == 0x2492492492492492492492492492492492492492492492492492492492492492);
+}

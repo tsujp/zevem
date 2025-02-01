@@ -62,7 +62,10 @@ pub const EVM = struct {
         return @as(OpCode, @enumFromInt(raw_bytecode));
     }
 
+    // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
+
     pub fn execute(self: *EVM, rom: []const u8) !void {
+        print("{s:=^32}\n", .{" EVM execute "});
         // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
         // JORDAN: Unsure if EVM spec __requires__ valid programs specify the bytecode for termination (e.g. 00 for stop, or f3 for return) or if at the end of bytecode the value at the top of the stack is valid. Another way of thinking about this is: how do we deal with running out of bytecode while we're NOT on a stop, or return opcode. Let our caller handle it? If we need to then we must check before dispatching the next instruction that there is further bytecode. How expensive is doing that in reality? That's an optimisation (and im guessing a nitpicky) one.
         _ = sw: switch (decodeOp(rom[self.ip])) {
@@ -100,7 +103,20 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            .DIV => {},
+            .DIV => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                // Stack top: numerator.
+                // Stack top - 1: denominator.
+                const numerator = self.stack.pop();
+                const denominator = self.stack.pop();
+
+                // Stack items are unsigned-integers, Zig will do floored division automatically.
+                try self.stack.append(if (denominator == 0) 0 else (numerator / denominator));
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
             .SDIV => {},
             .MOD => {},
             .SMOD => {},
