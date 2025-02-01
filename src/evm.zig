@@ -117,7 +117,27 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            .SDIV => {},
+            .SDIV => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                // Stack top: numerator.
+                // Stack top - 1: denominator.
+                // Both values treated as 2's complement signed 256-bit integers.
+                const numerator: i256 = @bitCast(self.stack.pop());
+                const denominator: i256 = @bitCast(self.stack.pop());
+
+                if (denominator == 0) {
+                    try self.stack.append(0);
+                    continue :sw decodeOp(rom[self.ip]);
+                }
+
+                // TODO: This can be optimised probably, look into it later. For example, before bit-casting we can perform the equivalent checks for -1 and -2^255 by checking for max u256 (i.e. all bits set, which is -1 in two's complement for i256) and whether only the first bit is set as that's maximum negative.
+
+                try self.stack.append(@bitCast(if (denominator == -1 and numerator == std.math.minInt(i256)) std.math.minInt(i256) else @divTrunc(numerator, denominator)));
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
             .MOD => {},
             .SMOD => {},
             .ADDMOD => {},
