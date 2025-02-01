@@ -60,7 +60,7 @@ test "basic SDIV" {
     var a = try basicBytecode("600060010500");
     try std.testing.expect(a.stack.pop() == 0);
 
-    // // Division of zero is zero.
+    // Division of zero is zero.
     var b = try basicBytecode("600160000500");
     try std.testing.expect(b.stack.pop() == 0);
 
@@ -68,4 +68,25 @@ test "basic SDIV" {
     try std.testing.expect(c.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8a);
 
     // TODO: Test truncation.
+}
+
+test "basic MOD" {
+    // Modulus with 0 denominator = 0.
+    var a = try basicBytecode("600060010600");
+    try std.testing.expect(a.stack.pop() == 0);
+
+    // 10 % 3 = 1.
+    var b = try basicBytecode("6003600a0600");
+    try std.testing.expect(b.stack.pop() == 1);
+
+    var c = try basicBytecode("60037ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb0600");
+    try std.testing.expect(c.stack.pop() == 2);
+}
+
+test "basic SMOD" {
+    var a = try basicBytecode("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80700");
+    try std.testing.expect(a.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
+
+    var b = try basicBytecode("60037ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb0700");
+    try std.testing.expect(b.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
 }

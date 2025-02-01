@@ -107,8 +107,7 @@ pub const EVM = struct {
                 traceOp(op, self.ip, .endln);
                 self.ip += 1;
 
-                // Stack top: numerator.
-                // Stack top - 1: denominator.
+                // s[0] = numerator ; s[1] = denominator.
                 const numerator = self.stack.pop();
                 const denominator = self.stack.pop();
 
@@ -121,8 +120,7 @@ pub const EVM = struct {
                 traceOp(op, self.ip, .endln);
                 self.ip += 1;
 
-                // Stack top: numerator.
-                // Stack top - 1: denominator.
+                // s[0] = numerator ; s[1] = denominator.
                 // Both values treated as 2's complement signed 256-bit integers.
                 const numerator: i256 = @bitCast(self.stack.pop());
                 const denominator: i256 = @bitCast(self.stack.pop());
@@ -138,8 +136,32 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            .MOD => {},
-            .SMOD => {},
+            .MOD => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                // s[0] = numerator ; s[1] = denominator.
+                const numerator = self.stack.pop();
+                const denominator = self.stack.pop();
+
+                // Stack items are unsigned-integers, Zig will do floored division automatically.
+                try self.stack.append(if (denominator == 0) 0 else (numerator % denominator));
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
+            .SMOD => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                // s[0] = numerator ; s[1] = denominator.
+                // Both values treated as 2's complement signed 256-bit integers.
+                const numerator: i256 = @bitCast(self.stack.pop());
+                const denominator: i256 = @bitCast(self.stack.pop());
+
+                try self.stack.append(if (denominator == 0) 0 else @bitCast(@rem(numerator, denominator)));
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
             .ADDMOD => {},
             .MULMOD => {},
             .EXP => {},
