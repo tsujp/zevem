@@ -28,11 +28,14 @@ fn traceOpPush(ip: usize, operand: WORD) void {
 // Meant to print _additional_ information for opcodes which take 2 items off the stack then put 1 back on.
 fn traceStackTake() void {}
 
-pub const EVM = struct {
+
+pub fn NewEVM(comptime Environment : type) type {
+    return  struct {
     const Self = @This();
     // TODO: ROM context.
     // TODO: Nested EVMs.
     // TODO: Gas.
+    env: *Environment,
 
     // TODO: Custom data structure for our stack (optimisation).
     stack: std.BoundedArray(WORD, MAX_STACK_DEPTH),
@@ -45,7 +48,7 @@ pub const EVM = struct {
 
     // TODO: Specialised allocators later on, perhaps external allocators passed in from host (where we're potentially embedded).
     // pub fn init(alloc: std.mem.Allocator) !Self {
-    pub fn init() !Self {
+    pub fn init(env: *Environment) !Self {
         // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
         return Self{
@@ -53,6 +56,7 @@ pub const EVM = struct {
             // .alloc = gpa.allocator(),
             .ip = 0,
             .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
+            .env = env,
         };
     }
 
@@ -64,7 +68,7 @@ pub const EVM = struct {
 
     // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
 
-    pub fn execute(self: *EVM, rom: []const u8) !void {
+    pub fn execute(self: *Self, rom: []const u8) !void {
         print("{s:=^32}\n", .{" EVM execute "});
         // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
         // JORDAN: Unsure if EVM spec __requires__ valid programs specify the bytecode for termination (e.g. 00 for stop, or f3 for return) or if at the end of bytecode the value at the top of the stack is valid. Another way of thinking about this is: how do we deal with running out of bytecode while we're NOT on a stop, or return opcode. Let our caller handle it? If we need to then we must check before dispatching the next instruction that there is further bytecode. How expensive is doing that in reality? That's an optimisation (and im guessing a nitpicky) one.
@@ -221,8 +225,15 @@ pub const EVM = struct {
             .SAR => {},
             .KECCAK256 => {},
             //
-            // TODO: From op ADDRESS onwards
+            // TODO: From op ORIGIN onwards
             //
+            .ADDRESS => {},
+            .BALANCE => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+                // in-place replace the content of the balance
+                self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len-1)));
+            },
             .PUSH0 => |op| {
                 traceOp(op, self.ip, .endln);
                 self.ip += 1;
@@ -275,3 +286,4 @@ pub const EVM = struct {
         };
     }
 };
+    }
