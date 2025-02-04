@@ -4,6 +4,9 @@ const OpCode = @import("opcode.zig").OpCode;
 
 const MAX_STACK_DEPTH = 1024;
 const WORD = u256;
+const DOUBLE_WORD = u512;
+
+const WORD_MAX = std.math.maxInt(WORD);
 
 // TODO: EVM specified big-endian.
 // TODO: EVM single allocation at start (configurable size or avoid using that strategy). Pass in desired context along with bytecode for easier simulation (e.g. devs, EIPs etc). For now: make a VM with pre-canned bytecode.
@@ -17,7 +20,7 @@ const TraceEndline = enum {
 // XXX: Could have an instruction struct/enum/tagged-union which @calls and inlines some so OP_PUSH3 finds the associated (internal) instruction which has the logic to execute OP_PUSH3 but also things like gas pricing, and any logging. Investigate later, feels too spaghetti for right now.
 // TODO: Better interface/implementation or just _stuff_ around tracing; idk. Do later even though it's extremely tempting to hack on cool comptime things now.
 fn traceOp(op: OpCode, ip: usize, endline: TraceEndline) void {
-    print("{x:0>6}\u{001b}[2m:{d}\u{001b}[0m  \u{001b}[2m{X:0>2}:\u{001b}[0m{s: <6}{s}", .{ ip, ip, @intFromEnum(op), @tagName(op), if (endline == .endln) "\n" else "\t" });
+    print("{x:0>6}\u{001b}[2m:{d:<3}\u{001b}[0m  \u{001b}[2m{x:0>2}:\u{001b}[0m{s:<6}{s}", .{ ip, ip, @intFromEnum(op), @tagName(op), if (endline == .endln) "\n" else "\t" });
 }
 
 // Meant to print _additional_ information for PUSH1 ... PUSH32.
@@ -41,16 +44,16 @@ pub const EVM = struct {
     // TODO: Best data size for this? u64, technically it can go to u256 right?
     ip: usize,
 
-    // alloc: std.mem.Allocator,
+    alloc: std.mem.Allocator,
 
     // TODO: Specialised allocators later on, perhaps external allocators passed in from host (where we're potentially embedded).
     // pub fn init(alloc: std.mem.Allocator) !Self {
     pub fn init() !Self {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
         return Self{
             // TODO:
-            // .alloc = gpa.allocator(),
+            .alloc = gpa.allocator(),
             .ip = 0,
             .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
         };
@@ -65,7 +68,7 @@ pub const EVM = struct {
     // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
 
     pub fn execute(self: *EVM, rom: []const u8) !void {
-        print("{s:=^32}\n", .{" EVM execute "});
+        print("{s:=^60}\n", .{" EVM execute "});
         // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
         // JORDAN: Unsure if EVM spec __requires__ valid programs specify the bytecode for termination (e.g. 00 for stop, or f3 for return) or if at the end of bytecode the value at the top of the stack is valid. Another way of thinking about this is: how do we deal with running out of bytecode while we're NOT on a stop, or return opcode. Let our caller handle it? If we need to then we must check before dispatching the next instruction that there is further bytecode. How expensive is doing that in reality? That's an optimisation (and im guessing a nitpicky) one.
         _ = sw: switch (decodeOp(rom[self.ip])) {
@@ -203,7 +206,36 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.ip]);
             },
-            .EXP => {},
+            .EXP => |op| {
+                traceOp(op, self.ip, .endln);
+                self.ip += 1;
+
+                // XXX: Alternative left-to-right binary exponentiation uses one less u512 but requires more bit-twiddling. Consider alternatives / optimise later on.
+
+                // s[0] = base ; s[1] = exponent.
+
+                var base: DOUBLE_WORD = self.stack.pop();
+                var exponent = self.stack.pop();
+
+                var result: DOUBLE_WORD = 1;
+
+                // Right-to-left binary exponentiation.
+                while (exponent > 0) : (exponent >>= 1) {
+                    if (@as(u1, @truncate(exponent)) == 1) {
+                        // result = (result * base) % WORD_MAX;
+                        result = @mod(result * base, WORD_MAX);
+                    }
+                    // base = (base * base) % WORD_MAX;
+                    base = @mod(base * base, WORD_MAX);
+                }
+
+                // Pedantic overflow check; could use @intCast instead.
+                std.debug.assert(result <= WORD_MAX);
+
+                try self.stack.append(@as(WORD, @truncate(result)));
+
+                continue :sw decodeOp(rom[self.ip]);
+            },
             .SIGNEXTEND => {},
             .LT => {},
             .GT => {},
@@ -257,8 +289,6 @@ pub const EVM = struct {
                     operand_bytes,
                     .big,
                 ));
-
-                // This is a new line.
 
                 traceOpPush(self.ip + offset, operand);
 

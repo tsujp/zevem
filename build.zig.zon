@@ -1,7 +1,7 @@
 .{
     .name = "zevem",
     .version = "0.0.0",
-    .minimum_zig_version = "0.14.0-dev.2851+b074fb7dd",
+    .minimum_zig_version = "0.14.0-dev.3028+cdc9d65b0",
     .dependencies = .{},
     .paths = .{
         "build.zig",

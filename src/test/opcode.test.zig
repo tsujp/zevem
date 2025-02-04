@@ -104,3 +104,70 @@ test "basic MULMOD" {
     var a = try basicBytecode("60127fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0900");
     try std.testing.expect(a.stack.pop() == 9);
 }
+
+test "basic EXP" {
+    // ////////////////////// If exponent is 0 result := 1.
+    // /////////////
+
+    // 255^0
+    var a01 = try basicBytecode("600060ff0a00");
+    try std.testing.expect(a01.stack.pop() == 1);
+
+    // 1^0
+    var a02 = try basicBytecode("5f60010a00");
+    try std.testing.expect(a02.stack.pop() == 1);
+
+    var a03 = try basicBytecode("7f00000000000000000000000000000000000000000000000000000000000000007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeee50a00");
+    try std.testing.expect(a03.stack.pop() == 1);
+
+    // ////////////////////// If base is 0 result := 0.
+    // /////////////
+
+    // 0^1
+    var b01 = try basicBytecode("60015f0a00");
+    try std.testing.expect(b01.stack.pop() == 0);
+
+    var b02 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60000a00");
+    try std.testing.expect(b02.stack.pop() == 0);
+
+    // ////////////////////// Except 0 raised to 0 which is defined := 1.
+    // /////////////
+
+    // 0^0 with push0
+    var c01 = try basicBytecode("5f5f0a00");
+    try std.testing.expect(c01.stack.pop() == 1);
+
+    // 0^0 with explicit pushN
+    var c02 = try basicBytecode("600060000a00");
+    try std.testing.expect(c02.stack.pop() == 1);
+
+    // ////////////////////// General.
+    // /////////////
+
+    var d01 = try basicBytecode("60ff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0a00");
+    try std.testing.expect(d01.stack.pop() == 0);
+
+    var d02 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff0a00");
+    try std.testing.expect(d02.stack.pop() == 0xc3c5ad91264cb4b9861fb06c007b72e6d1718ff9ad607fded1c19354df1ef714);
+
+    var d03 = try basicBytecode("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0a00");
+    try std.testing.expect(d03.stack.pop() == 0);
+
+    var d04 = try basicBytecode("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff07fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0a00");
+    try std.testing.expect(d04.stack.pop() == 0);
+
+    var d05 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0a00");
+    try std.testing.expect(d05.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
+
+    var d06 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeee50a00");
+    try std.testing.expect(d06.stack.pop() == 0x14e59abaf9f01abbc8f816461dc19405a0de1e3d3a113421e694b2b7c4032d56);
+
+    var d07 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0a00");
+    try std.testing.expect(d07.stack.pop() == 0);
+
+    var d08 = try basicBytecode("7effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0a00");
+    try std.testing.expect(d08.stack.pop() == 0x4fe63c7b38548808bcc441513969d99ad4a53a0c67bc73f8780b2d14cb2c4b7);
+
+    var d09 = try basicBytecode("60cc60020a00");
+    try std.testing.expect(d09.stack.pop() == 0x1000000000000000000000000000000000000000000000000000);
+}

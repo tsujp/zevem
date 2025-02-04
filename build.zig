@@ -49,7 +49,7 @@ pub fn build(b: *Build) void {
 }
 
 // comptime {
-//     const zig_ver_str = "0.14.0-dev.2851+b074fb7dd";
+//     const zig_ver_str = "0.14.0-dev.3028+cdc9d65b0";
 //     const supported_zig = std.SemanticVersion.parse(zig_ver_str) catch unreachable;
 //     if (builtin.zig_version.order(supported_zig) != .eq) {
 //         @compileError(std.fmt.comptimePrint("Unsupported Zig version {}; require {s}", .{ builtin.zig_version, zig_ver_str }));
