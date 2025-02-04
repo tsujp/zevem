@@ -1,9 +1,24 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const Build = std.Build;
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    _ = b.addModule("zevem", Build.Module.CreateOptions{
+        .root_source_file = b.path("src/evm.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "zevem",
+        .root_source_file = b.path("src/evm.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(lib);
 
     const bin = b.addExecutable(.{
         .name = "zevem",
