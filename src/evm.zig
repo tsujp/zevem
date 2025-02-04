@@ -3,8 +3,11 @@ const print = std.debug.print;
 const OpCode = @import("opcode.zig").OpCode;
 
 const MAX_STACK_DEPTH = 1024;
+
 const WORD = u256;
 const DOUBLE_WORD = u512;
+
+const SIGNED_WORD = i256;
 
 const WORD_MAX = std.math.maxInt(WORD);
 
@@ -258,8 +261,36 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .SLT => {},
-            .SGT => {},
+            .SLT => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] < s[1]
+
+                // zig fmt: off
+                try self.stack.append(@intFromBool(
+                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))
+                        <
+                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
+                // zig fmt: on
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
+            .SGT => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] > s[1]
+
+                // zig fmt: off
+                try self.stack.append(@intFromBool(
+                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))
+                        >
+                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
+                // zig fmt: on
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
             .EQ => {},
             .ISZERO => {},
             .AND => {},

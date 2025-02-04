@@ -207,3 +207,39 @@ test "basic GT" {
     var a04 = try basicBytecode("60456101a41100");
     try std.testing.expect(a04.stack.pop() == 1);
 }
+
+test "basic SLT" {
+    // -420 < +69 = 1
+    var a01 = try basicBytecode("60456101a45f031200");
+    try std.testing.expect(a01.stack.pop() == 1);
+
+    // -2 < -1 = 1
+    var a02 = try basicBytecode("60015f0360025f031200");
+    try std.testing.expect(a02.stack.pop() == 1);
+
+    // 0 < 0 = 0
+    var a03 = try basicBytecode("5f5f1200");
+    try std.testing.expect(a03.stack.pop() == 0);
+
+    // +9 < -6 = 0
+    var a04 = try basicBytecode("60065f0360091200");
+    try std.testing.expect(a04.stack.pop() == 0);
+}
+
+test "basic SGT" {
+    // -420 > +69 = 0
+    var a01 = try basicBytecode("60456101a45f031300");
+    try std.testing.expect(a01.stack.pop() == 0);
+
+    // -2 > -1 = 0
+    var a02 = try basicBytecode("60015f0360025f031300");
+    try std.testing.expect(a02.stack.pop() == 0);
+
+    // 0 > 0 = 0
+    var a03 = try basicBytecode("5f5f1300");
+    try std.testing.expect(a03.stack.pop() == 0);
+
+    // +9 > -6 = 1
+    var a04 = try basicBytecode("60065f0360091300");
+    try std.testing.expect(a04.stack.pop() == 1);
+}
