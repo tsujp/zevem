@@ -46,7 +46,6 @@ RUN dnf update -y && dnf install -y \
 	# && dnf clean all
 
 # TODO: Install zls (download from git and verify with minisign).
-# TODO: Install eat terminfo.
 
 # -------------------------------------------- Namespace mapping.
 # Without the following magic adduser namespace mapping will break horribly. If you do NOT want to use it one alternative is that the Containerfile must specify no USER at all, and when calling `run` on podman-machine as user `core` `--userns keep-id:uid=501` must be passed.
@@ -66,7 +65,9 @@ RUN adduser \
 # XXX: Temporary until zig 0.14.0 released.
 # https://ziglang.org/builds/zig-linux-aarch64-0.14.0-dev.2851+b074fb7dd.tar.xz
 # TODO: zls for zig 0.14.0-dev also
-COPY .jam/zig-linux-aarch64-0.14.0-dev.2851+b074fb7dd.tar.xz /tmp/zig.tar.xz
+# COPY .jam/zig-linux-aarch64-0.14.0-dev.2851+b074fb7dd.tar.xz /tmp/zig.tar.xz
+# COPY .jam/zig-linux-aarch64-0.14.0-dev.3020+c104e8644.tar.xz /tmp/zig.tar.xz
+COPY .jam/zig-linux-aarch64-0.14.0-dev.3028+cdc9d65b0.tar.xz /tmp/zig.tar.xz
 RUN chown 501:1000 /tmp/zig.tar.xz
 USER $USERNAME
 RUN mkdir -p /home/jammy/bin
