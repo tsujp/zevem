@@ -171,3 +171,21 @@ test "basic EXP" {
     var d09 = try basicBytecode("60cc60020a00");
     try std.testing.expect(d09.stack.pop() == 0x1000000000000000000000000000000000000000000000000000);
 }
+
+test "basic LT" {
+    // 1 < 5 = 1
+    var a01 = try basicBytecode("600560011000");
+    try std.testing.expect(a01.stack.pop() == 1);
+
+    // 0 < 1 = 1
+    var a02 = try basicBytecode("60015f1000");
+    try std.testing.expect(a02.stack.pop() == 1);
+
+    // 0 < 0 = 0
+    var a03 = try basicBytecode("5f5f1000");
+    try std.testing.expect(a03.stack.pop() == 0);
+
+    // 420 < 69 = 0
+    var a04 = try basicBytecode("60456101a41000");
+    try std.testing.expect(a04.stack.pop() == 0);
+}

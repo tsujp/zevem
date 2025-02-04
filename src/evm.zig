@@ -235,8 +235,19 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .SIGNEXTEND => {},
-            .LT => {},
+            .SIGNEXTEND => {
+                // TODO:
+            },
+            .LT => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] < s[1]
+
+                try self.stack.append(@intFromBool(self.stack.pop() < self.stack.pop()));
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
             .GT => {},
             .SLT => {},
             .SGT => {},
