@@ -375,7 +375,25 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .SHR => {},
+            .SHR => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] = bits to shift by ; s[1] = value to be shifted
+
+                const bits = self.stack.pop();
+
+                // Trying to shift right over 255 (WORD bits - 1) places shortcut to zero.
+                if (bits >= @typeInfo(WORD).int.bits) {
+                    _ = self.stack.pop();
+                    try self.stack.append(0);
+                    continue :sw decodeOp(rom[self.pc]);
+                }
+
+                try self.stack.append(self.stack.pop() >> @as(u8, @truncate(bits)));
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
             .SAR => {},
             .KECCAK256 => {},
             //
