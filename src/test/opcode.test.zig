@@ -174,7 +174,38 @@ test "basic EXP" {
 }
 
 test "basic SIGNEXTEND" {
-    // TODO:
+    // s[1] is 0xff is -1 in two's complement, s[0] is 0 because 0 + 1 = 1 byte which is the size of s[1]; s[1] is extended completely to fill the word size (256 bits) meaning in this case all 256 bits are set to 1.
+    var a01 = try basicBytecode("60ff5f0b00");
+    try expect(a01.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
+
+    // 0x7f is 127 in two's complement which isn't negative so nothing is done.
+    var a02 = try basicBytecode("607f5f0b00");
+    try expect(a02.stack.pop() == 0x7f);
+
+    var a03 = try basicBytecode("60fe5f0b00");
+    try expect(a03.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
+
+    var a04 = try basicBytecode("60b35f0b00");
+    try expect(a04.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb3);
+
+    // Uh oh! You provided s[0] as 1 forgetting it needs to be provided as the byte size minus 1, now SIGNEXTEND will read 2 bytes, but the MSBs will be zeroed thus this won't be a two's complement negative and so nothing will happen! D'oh! Git gudder n00b!
+    var a05 = try basicBytecode("60ff60010b00");
+    try expect(a05.stack.pop() == 0xff);
+
+    // Some 32-bit two's complement negative.
+    var a06 = try basicBytecode("63ad24465f60030b00");
+    try expect(a06.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffad24465f);
+
+    // There's nothing to do with a value that's already full-width.
+    var a07 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff601f0b00");
+    try expect(a07.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
+
+    // If s[0] is given too low the result is unclobbered by "missed" more-significant bits.
+    var a08 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60010b00");
+    try expect(a08.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
+
+    var a09 = try basicBytecode("7effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff601e0b00");
+    try expect(a09.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
 }
 
 test "basic LT" {

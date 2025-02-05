@@ -13,7 +13,7 @@ const SIGNED_WORD = i256;
 
 const WORD_SIGN_MASK = (1 << @typeInfo(WORD).int.bits - 1);
 
-const WORD_MAX = std.math.maxInt(WORD);
+const WORD_MAX: WORD = std.math.maxInt(WORD);
 
 const BYTES_IN_WORD = @divExact(@typeInfo(WORD).int.bits, 8);
 const BITS_IN_WORD: u16 = @typeInfo(WORD).int.bits;
@@ -260,8 +260,43 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .SIGNEXTEND => {
-                // TODO:
+            .SIGNEXTEND => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] = byte size of target value minus one ; s[1] = value
+
+                // s[1] is read as a two's complement signed integer; if s[1] has a meaningful
+                // byte size of 2 then s[0] is given as 1 since that is s[1]'s meaningful
+                // byte size minus one.
+
+                // Practically s[0] has a maximum meaningful value of 30 when read from the
+                // stack (2 less than BYTES_IN_WORD which becomes 31, it's real
+                // meaningful-maximum, as we add 1) and if s[0] is above 31 nothing is done to
+                // s[1].
+
+                // Extension is always done up to WORD size.
+
+                const bytes = self.stack.pop() + 1;
+
+                // There's no room to extend s[1] so we can do nothing.
+                if (bytes > (BYTES_IN_WORD - 1)) {
+                    continue :sw decodeOp(rom[self.pc]);
+                }
+
+                // TODO: Optimise this as needed.
+                const value = self.stack.pop();
+                const msb = @as(u1, @truncate(value >> (u8Truncate(bytes) * 8) - 1));
+
+                // Not a negative two's complement number, nothing to do.
+                if (msb != 1) {
+                    try self.stack.append(value);
+                    continue :sw decodeOp(rom[self.pc]);
+                }
+
+                try self.stack.append((WORD_MAX << (u8Truncate(bytes) * 8)) | value);
+
+                continue :sw decodeOp(rom[self.pc]);
             },
             .LT => |op| {
                 traceOp(op, self.pc, .endln);
