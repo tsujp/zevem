@@ -173,6 +173,10 @@ test "basic EXP" {
     try expect(d09.stack.pop() == 0x1000000000000000000000000000000000000000000000000000);
 }
 
+test "basic SIGNEXTEND" {
+    // TODO:
+}
+
 test "basic LT" {
     // 1 < 5 = 1
     var a01 = try basicBytecode("600560011000");
@@ -315,6 +319,58 @@ test "basic NOT" {
     var a02 = try basicBytecode("600f1900");
     try expect(a02.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0);
 
-    var a03 = try basicBytecode("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0");
+    var a03 = try basicBytecode("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01900");
     try expect(a03.stack.pop() == 0x0f);
+}
+
+test "basic BYTE" {
+    // TODO:
+}
+
+test "basic SHL" {
+    // These tests are from: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-145.md#shl-shift-left
+    var a01 = try basicBytecode("60015f1b00");
+    try expect(a01.stack.pop() == 1);
+
+    var a02 = try basicBytecode("600160011b00");
+    try expect(a02.stack.pop() == 2);
+
+    var a03 = try basicBytecode("600160ff1b00");
+    try expect(a03.stack.pop() == 0x8000000000000000000000000000000000000000000000000000000000000000);
+
+    var a04 = try basicBytecode("60016101001b00");
+    try expect(a04.stack.pop() == 0);
+
+    var a05 = try basicBytecode("60016101011b00");
+    try expect(a05.stack.pop() == 0);
+
+    var a06 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5f1b00");
+    try expect(a06.stack.pop() == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
+
+    var a07 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60011b00");
+    try expect(a07.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
+
+    var a08 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff1b00");
+    try expect(a08.stack.pop() == 0x8000000000000000000000000000000000000000000000000000000000000000);
+
+    var a09 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6101001b00");
+    try expect(a09.stack.pop() == 0);
+
+    var a10 = try basicBytecode("5f60011b00");
+    try expect(a10.stack.pop() == 0);
+
+    var a11 = try basicBytecode("7f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60011b00");
+    try expect(a11.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
+}
+
+test "basic SHR" {
+    // TODO:
+}
+
+test "basic SAR" {
+    // TODO:
+}
+
+test "basic KECCAK256" {
+    // TODO:
 }

@@ -352,8 +352,29 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .BYTE => {},
-            .SHL => {},
+            .BYTE => {
+                // TODO:
+            },
+            .SHL => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] = bits to shift by ; s[1] = value to be shifted
+
+                const bits = self.stack.pop();
+
+                // Trying to shift left over 255 (WORD bits - 1) places shortcut to zero.
+                if (bits >= @typeInfo(WORD).int.bits) {
+                    _ = self.stack.pop(); // XXX: Ripe for top of stack set.
+                    try self.stack.append(0);
+                    continue :sw decodeOp(rom[self.pc]);
+                }
+
+                // TODO: u8 being log2(u256) i.e. log2(WORD) is all the reflection on WORD worth it? Idea being maybe someone could (idk why) change WORD to.. u128 but then it wouldn't be the EVM (unless the spec changed) etc.
+                try self.stack.append(self.stack.pop() << @as(u8, @truncate(bits)));
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
             .SHR => {},
             .SAR => {},
             .KECCAK256 => {},
