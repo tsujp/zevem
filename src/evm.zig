@@ -9,6 +9,8 @@ const DOUBLE_WORD = u512;
 
 const SIGNED_WORD = i256;
 
+const WORD_SIGN_MASK = (1 << @typeInfo(WORD).int.bits - 1);
+
 const WORD_MAX = std.math.maxInt(WORD);
 
 // TODO: EVM specified big-endian.
@@ -69,6 +71,16 @@ pub const EVM = struct {
     }
 
     // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
+
+    // TODO: Have these as a comptime function which will inline flip the sign instead?
+
+    inline fn asSignedWord(value: WORD) SIGNED_WORD {
+        return @as(SIGNED_WORD, @bitCast(value));
+    }
+
+    inline fn asUnsignedWord(value: SIGNED_WORD) WORD {
+        return @as(WORD, @bitCast(value));
+    }
 
     pub fn execute(self: *EVM, rom: []const u8) !void {
         print("{s:=^60}\n", .{" EVM execute "});
@@ -355,6 +367,7 @@ pub const EVM = struct {
             .BYTE => {
                 // TODO:
             },
+            // XXX: For SHL, SHR, SAR: which is faster doing these bitwise shifts or equivalent arithmetic (floor division etc). Optimisation. Need to benchmark the assembly from these and compare it to the "naive" way of doing them (just divisions etc) since LLVM _probably_ does a better job..?
             .SHL => |op| {
                 traceOp(op, self.pc, .endln);
                 self.pc += 1;
@@ -394,7 +407,32 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .SAR => {},
+            .SAR => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] = bits to shift by ; s[1] = value to be shifted
+                // s[1] and result pushed to stack are treated as signed; s[0] is unsigned.
+
+                const bits = self.stack.pop();
+                const value = asSignedWord(self.stack.pop());
+
+                // Trying to shift right over 255 (WORD bits - 1) places shortcut...
+                if (bits >= @typeInfo(WORD).int.bits) {
+                    switch (value > 0) {
+                        // ...positive so 0
+                        true => try self.stack.append(0),
+                        // ...negative so -1
+                        false => try self.stack.append(asUnsignedWord(-1)),
+                    }
+
+                    continue :sw decodeOp(rom[self.pc]);
+                }
+
+                try self.stack.append(asUnsignedWord(value >> @as(u8, @truncate(bits))));
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
             .KECCAK256 => {},
             //
             // TODO: From op ADDRESS onwards
