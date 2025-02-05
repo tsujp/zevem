@@ -1,6 +1,8 @@
 const std = @import("std");
 const print = std.debug.print;
 const OpCode = @import("opcode.zig").OpCode;
+const builtin = @import("builtin");
+const native_endian = builtin.cpu.arch.endian();
 
 const MAX_STACK_DEPTH = 1024;
 
@@ -12,6 +14,9 @@ const SIGNED_WORD = i256;
 const WORD_SIGN_MASK = (1 << @typeInfo(WORD).int.bits - 1);
 
 const WORD_MAX = std.math.maxInt(WORD);
+
+const BYTES_IN_WORD = @divExact(@typeInfo(WORD).int.bits, 8);
+const BITS_IN_WORD: u16 = @typeInfo(WORD).int.bits;
 
 // TODO: EVM specified big-endian.
 // TODO: EVM single allocation at start (configurable size or avoid using that strategy). Pass in desired context along with bytecode for easier simulation (e.g. devs, EIPs etc). For now: make a VM with pre-canned bytecode.
@@ -80,6 +85,11 @@ pub const EVM = struct {
 
     inline fn asUnsignedWord(value: SIGNED_WORD) WORD {
         return @as(WORD, @bitCast(value));
+    }
+
+    // XXX: Is this actually useful? Trying to make things clearer.
+    inline fn u8Truncate(value: anytype) u8 {
+        return @as(u8, @truncate(value));
     }
 
     pub fn execute(self: *EVM, rom: []const u8) !void {
@@ -364,8 +374,33 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .BYTE => {
-                // TODO:
+            .BYTE => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] = byte offset to take from ; s[1] = word value to be sliced
+
+                const offset = self.stack.pop();
+
+                // s[0] above amount of bytes in WORD, shortcut response to 0.
+                if (offset >= BYTES_IN_WORD) {
+                    self.stack.set(self.stack.len - 1, 0);
+
+                    continue :sw decodeOp(rom[self.pc]);
+                }
+
+                // zig fmt: off
+                self.stack.set(
+                    self.stack.len - 1,
+                    u8Truncate(
+                        self.stack.get(self.stack.len - 1)
+                            >>
+                        (@as(u8, BITS_IN_WORD - 8) - (u8Truncate(offset) * 8))
+                    )
+                );
+                // zig fmt: on
+
+                continue :sw decodeOp(rom[self.pc]);
             },
             // XXX: For SHL, SHR, SAR: which is faster doing these bitwise shifts or equivalent arithmetic (floor division etc). Optimisation. Need to benchmark the assembly from these and compare it to the "naive" way of doing them (just divisions etc) since LLVM _probably_ does a better job..?
             .SHL => |op| {
@@ -433,7 +468,9 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .KECCAK256 => {},
+            .KECCAK256 => {
+                // TODO: Check zig stdlib or other packages. Also since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
+            },
             //
             // TODO: From op ADDRESS onwards
             //

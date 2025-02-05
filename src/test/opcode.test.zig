@@ -324,7 +324,31 @@ test "basic NOT" {
 }
 
 test "basic BYTE" {
-    // TODO:
+    // Tests from: https://github.com/ethereum/go-ethereum/blob/e3d61e6db028c412f74bc4d4c7e117a9e29d0de0/core/vm/instructions_test.go#L132-L139
+
+    var a01 = try basicBytecode("7fabcdef09080706050403020100000000000000000000000000000000000000005f1a00");
+    try expect(a01.stack.pop() == 0xab);
+
+    var a02 = try basicBytecode("7fabcdef090807060504030201000000000000000000000000000000000000000060011a00");
+    try expect(a02.stack.pop() == 0xcd);
+
+    var a03 = try basicBytecode("7f00cdef090807060504030201ffffffffffffffffffffffffffffffffffffffff5f1a00");
+    try expect(a03.stack.pop() == 0);
+
+    var a04 = try basicBytecode("7f00cdef090807060504030201ffffffffffffffffffffffffffffffffffffffff60011a00");
+    try expect(a04.stack.pop() == 0xcd);
+
+    var a05 = try basicBytecode("7f0000000000000000000000000000000000000000000000000000000000102030601f1a00");
+    try expect(a05.stack.pop() == 0x30);
+
+    var a06 = try basicBytecode("7f0000000000000000000000000000000000000000000000000000000000102030601e1a00");
+    try expect(a06.stack.pop() == 0x20);
+
+    var a07 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60201a00");
+    try expect(a07.stack.pop() == 0);
+
+    var a08 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff67ffffffffffffffff1a00");
+    try expect(a08.stack.pop() == 0);
 }
 
 test "basic SHL" {
