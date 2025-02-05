@@ -28,7 +28,7 @@ fn traceOp(op: OpCode, pc: usize, endline: TraceEndline) void {
 
 // Meant to print _additional_ information for PUSH1 ... PUSH32.
 fn traceOpPush(pc: usize, operand: WORD) void {
-    print("new_pc={d}, pushed=0x{X}\n", .{ pc, operand });
+    print("new_pc={d}, pushed=0x{x}\n", .{ pc, operand });
 }
 
 // Meant to print _additional_ information for opcodes which take 2 items off the stack then put 1 back on.
@@ -291,12 +291,67 @@ pub const EVM = struct {
 
                 continue :sw decodeOp(rom[self.pc]);
             },
-            .EQ => {},
-            .ISZERO => {},
-            .AND => {},
-            .OR => {},
-            .XOR => {},
-            .NOT => {},
+            .EQ => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] == s[1]
+
+                try self.stack.append(@intFromBool(self.stack.pop() == self.stack.pop()));
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
+            .ISZERO => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // s[0] == 0
+
+                try self.stack.append(@intFromBool(self.stack.pop() == 0));
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
+            .AND => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // Bitwise: s[0] AND s[1]
+
+                // TODO: A bunch of these kinds of patterns can likely be optimised to just popping one element off, and then setting the top stack element. Optimise after BoundedArray is kept or changed.
+                try self.stack.append(self.stack.pop() & self.stack.pop());
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
+            .OR => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // Bitwise: s[0] OR s[1]
+
+                try self.stack.append(self.stack.pop() | self.stack.pop());
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
+            .XOR => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // Bitwise: s[0] XOR s[1]
+
+                try self.stack.append(self.stack.pop() ^ self.stack.pop());
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
+            .NOT => |op| {
+                traceOp(op, self.pc, .endln);
+                self.pc += 1;
+
+                // Bitwise: NOT s[0]
+
+                try self.stack.append(~self.stack.pop());
+
+                continue :sw decodeOp(rom[self.pc]);
+            },
             .BYTE => {},
             .SHL => {},
             .SHR => {},
