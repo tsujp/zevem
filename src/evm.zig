@@ -328,11 +328,11 @@ pub fn NewEVM(comptime Environment: type) type {
                     // s[0] < s[1]
 
                     // zig fmt: off
-                try self.stack.append(@intFromBool(
-                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))
-                        <
-                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
-                // zig fmt: on
+                    try self.stack.append(@intFromBool(
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))
+                            <
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
+                    // zig fmt: on
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -343,11 +343,11 @@ pub fn NewEVM(comptime Environment: type) type {
                     // s[0] > s[1]
 
                     // zig fmt: off
-                try self.stack.append(@intFromBool(
-                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))
-                        >
-                    @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
-                // zig fmt: on
+                    try self.stack.append(@intFromBool(
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))
+                            >
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
+                    // zig fmt: on
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -428,15 +428,15 @@ pub fn NewEVM(comptime Environment: type) type {
                     }
 
                     // zig fmt: off
-                self.stack.set(
-                    self.stack.len - 1,
-                    u8Truncate(
-                        self.stack.get(self.stack.len - 1)
-                            >>
-                        (@as(u8, BITS_IN_WORD - 8) - (u8Truncate(offset) * 8))
-                    )
-                );
-                // zig fmt: on
+                    self.stack.set(
+                        self.stack.len - 1,
+                        u8Truncate(
+                            self.stack.get(self.stack.len - 1)
+                                >>
+                            (@as(u8, BITS_IN_WORD - 8) - (u8Truncate(offset) * 8))
+                        )
+                    );
+                    // zig fmt: on
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -516,6 +516,7 @@ pub fn NewEVM(comptime Environment: type) type {
                 .BALANCE => |op| {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
+
                     // in-place replace the content of the balance
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
                 },
@@ -529,11 +530,11 @@ pub fn NewEVM(comptime Environment: type) type {
                 },
                 // TODO: I don't think ranges over enums are allowed here, can check later (simple example file elsewhere) not that important right now. It is funny that I end up unrolling this manually though.
                 // zig fmt: off
-            inline .PUSH1,  .PUSH2,  .PUSH3,  .PUSH4,  .PUSH5,  .PUSH6,  .PUSH7,  .PUSH8,
-                   .PUSH9,  .PUSH10, .PUSH11, .PUSH12, .PUSH13, .PUSH14, .PUSH15, .PUSH16,
-                   .PUSH17, .PUSH18, .PUSH19, .PUSH20, .PUSH21, .PUSH22, .PUSH23, .PUSH24,
-                   .PUSH25, .PUSH26, .PUSH27, .PUSH28, .PUSH29, .PUSH30, .PUSH31, .PUSH32
-            // zig fmt: on
+                inline .PUSH1,  .PUSH2,  .PUSH3,  .PUSH4,  .PUSH5,  .PUSH6,  .PUSH7,  .PUSH8,
+                       .PUSH9,  .PUSH10, .PUSH11, .PUSH12, .PUSH13, .PUSH14, .PUSH15, .PUSH16,
+                       .PUSH17, .PUSH18, .PUSH19, .PUSH20, .PUSH21, .PUSH22, .PUSH23, .PUSH24,
+                       .PUSH25, .PUSH26, .PUSH27, .PUSH28, .PUSH29, .PUSH30, .PUSH31, .PUSH32
+                // zig fmt: on
                 => |op| {
                     traceOp(op, self.pc, .cntln);
                     self.pc += 1;
