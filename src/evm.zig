@@ -56,19 +56,23 @@ pub fn NewEVM(comptime Environment: type) type {
         // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later.
         pc: usize,
 
+        mem: std.ArrayList(u8),
+
         alloc: std.mem.Allocator,
 
         // TODO: Specialised allocators later on, perhaps external allocators passed in from host (where we're potentially embedded).
         // pub fn init(alloc: std.mem.Allocator) !Self {
         pub fn init(env: *Environment) !Self {
             var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            const allocator = gpa.allocator();
 
             return Self{
                 // TODO:
-                .alloc = gpa.allocator(),
+                .alloc = allocator,
                 .pc = 0,
                 .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
                 .env = env,
+                .mem = std.ArrayList(u8).init(allocator),
             };
         }
 
@@ -519,6 +523,31 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // in-place replace the content of the balance
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
+                },
+                .MSTORE => |op| {
+                    traceOp(op, self.pc, .endln);
+                    self.pc += 1;
+
+                    const offset = self.stack.pop();
+                    const value = self.stack.pop();
+
+                    // resize memory if need be
+                    // NOTE: this should incur some extra gas cost
+                    const sum_and_overflow = @addWithOverflow(offset, 32);
+                    if (sum_and_overflow[1] == 1) {
+                        return error.MemResizeUInt256Overflow;
+                    }
+                    if (@as(u256, self.mem.items.len) < sum_and_overflow[0]) {
+                        const memsize_usize : usize = @truncate(sum_and_overflow[0]);
+                        const old_size = self.mem.items.len;
+                        // GUILLAUME: Note that this will potentially OOM if the offset is too large.
+                        // This is ok, because it's meant to be capped by the gas cost.
+                        try self.mem.resize(memsize_usize);
+                        @memset(self.mem.items[old_size..@truncate(offset)], 0);
+                    }
+                    std.mem.writeInt(u256, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset+32)]), value, .big);
+
+                    continue :sw decodeOp(rom[self.pc]);
                 },
                 .PUSH0 => |op| {
                     traceOp(op, self.pc, .endln);
