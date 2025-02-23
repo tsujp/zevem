@@ -1,6 +1,7 @@
 // TODO: Better pattern here? Idk, you can take DRY too far.
 const util = @import("../util.zig");
 const basicBytecode = util.evmBasicBytecode;
+const DummyEnv = util.DummyEnv;
 const bc = util.htb;
 const std = @import("std");
 const expect = std.testing.expect;
@@ -510,4 +511,27 @@ test "basic SAR" {
 
 test "basic KECCAK256" {
     // TODO:
+}
+
+test "basic MSTORE" {
+    // Store 0xff..ff at 0xff, expanding the memory size in the process.
+    const vm1 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff5200");
+    try expect(vm1.stack.len == 0);
+    std.debug.print("vm.mem.items = {any}\n", .{vm1.mem.items.len});
+    try expect(vm1.mem.items.len == 255 + 32);
+    for (0..0xff) |i| {
+        try expect(vm1.mem.items[i] == 0);
+    }
+    for (0xff..0xff + 32) |i| {
+        try expect(vm1.mem.items[i] == 0xff);
+    }
+
+    // Swap the two arguments, to check if an overflow is detected
+    const overflow_result = basicBytecode("60ff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5200");
+    try expect(overflow_result == error.MemResizeUInt256Overflow);
+
+    // Check the temporary condition that resizing the memory to an
+    // incredible value is going to fail.
+    const resize_error = basicBytecode("60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200");
+    try expect(resize_error == error.OutOfMemory);
 }
