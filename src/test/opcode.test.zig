@@ -535,3 +535,25 @@ test "basic MSTORE" {
     const resize_error = basicBytecode("60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200");
     try expect(resize_error == error.OutOfMemory);
 }
+
+test "basic RETURN" {
+    // Store 0xff..ff at 0xff, expanding the memory size in the process, then return.
+    const vm = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060ffF300");
+    std.debug.print("vm.return_data = {any}, len = {d}\n", .{ vm.return_data, vm.return_data.len });
+    try expect(vm.return_data.len == 32);
+    for (vm.return_data) |i| {
+        try expect(i == 0xff);
+    }
+}
+
+test "basic REVERT" {
+    // Store 0xff..ff at 0xff, expanding the memory size in the process, then revert.
+    var dummyEnv: DummyEnv = .{};
+    var evm = try util.EVM.init(&dummyEnv);
+    const err = evm.execute(&util.htb("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060ffFd"));
+    try expect(err == error.Revert);
+    try expect(evm.return_data.len == 32);
+    for (evm.return_data) |i| {
+        try expect(i == 0xff);
+    }
+}
