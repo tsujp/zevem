@@ -60,6 +60,8 @@ pub fn NewEVM(comptime Environment: type) type {
 
         alloc: std.mem.Allocator,
 
+        return_data: []u8,
+
         // TODO: Specialised allocators later on, perhaps external allocators passed in from host (where we're potentially embedded).
         // pub fn init(alloc: std.mem.Allocator) !Self {
         pub fn init(env: *Environment) !Self {
@@ -73,6 +75,7 @@ pub fn NewEVM(comptime Environment: type) type {
                 .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
                 .env = env,
                 .mem = std.ArrayList(u8).init(allocator),
+                .return_data = &[0]u8{},
             };
         }
 
@@ -590,6 +593,20 @@ pub fn NewEVM(comptime Environment: type) type {
                     self.pc += offset;
 
                     continue :sw decodeOp(rom[self.pc]);
+                },
+                .RETURN, .REVERT => |op| {
+                    traceOp(op, self.pc, .endln);
+                    const offset = self.stack.pop();
+                    const size = self.stack.pop();
+                    self.return_data = try self.alloc.alloc(u8, @truncate(size));
+                    if (offset < self.mem.items.len) {
+                        const end = @min(offset + size, self.mem.items.len);
+
+                        @memcpy(self.return_data[0..], self.mem.items[@truncate(offset)..end]);
+                    }
+                    if (op == .REVERT)
+                        return error.Revert;
+                    return;
                 },
                 // TEMPORARY.
                 // TODO: Do we want catch unreachable here (in which case make OpCode enum non-exhaustive) or do we want a prong to prevent runtime crashes and log the unhandled opcode. I guess the latter.
