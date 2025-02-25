@@ -18,7 +18,6 @@ const WORD_MAX: WORD = std.math.maxInt(WORD);
 const BYTES_IN_WORD = @divExact(@typeInfo(WORD).int.bits, 8);
 const BITS_IN_WORD: u16 = @typeInfo(WORD).int.bits;
 
-// TODO: EVM specified big-endian.
 // TODO: EVM single allocation at start (configurable size or avoid using that strategy). Pass in desired context along with bytecode for easier simulation (e.g. devs, EIPs etc). For now: make a VM with pre-canned bytecode.
 // TODO: Scoped logging.
 
@@ -69,7 +68,6 @@ pub fn NewEVM(comptime Environment: type) type {
             const allocator = gpa.allocator();
 
             return Self{
-                // TODO:
                 .alloc = allocator,
                 .pc = 0,
                 .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
@@ -516,10 +514,9 @@ pub fn NewEVM(comptime Environment: type) type {
                 .KECCAK256 => {
                     // TODO: Check zig stdlib or other packages. Also since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
                 },
-                //
-                // TODO: From op ORIGIN onwards
-                //
-                .ADDRESS => {},
+                .ADDRESS => {
+                    // TODO
+                },
                 .BALANCE => |op| {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
@@ -527,9 +524,18 @@ pub fn NewEVM(comptime Environment: type) type {
                     // in-place replace the content of the balance
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
                 },
+                // TODO: ORIGIN to BLOBBASEFEE
+                .POP => {
+                    // TODO
+                },
+                .MLOAD => {
+                    // TODO
+                },
                 .MSTORE => |op| {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
+
+                    // s[0] = memory offset to write from ; s[1] = value to write
 
                     const offset = self.stack.pop();
                     const value = self.stack.pop();
@@ -541,17 +547,18 @@ pub fn NewEVM(comptime Environment: type) type {
                         return error.MemResizeUInt256Overflow;
                     }
                     if (@as(u256, self.mem.items.len) < sum_and_overflow[0]) {
-                        const memsize_usize : usize = @truncate(sum_and_overflow[0]);
+                        const memsize_usize: usize = @truncate(sum_and_overflow[0]);
                         const old_size = self.mem.items.len;
                         // GUILLAUME: Note that this will potentially OOM if the offset is too large.
                         // This is ok, because it's meant to be capped by the gas cost.
                         try self.mem.resize(memsize_usize);
                         @memset(self.mem.items[old_size..@truncate(offset)], 0);
                     }
-                    std.mem.writeInt(u256, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset+32)]), value, .big);
+                    std.mem.writeInt(u256, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), value, .big);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
+                // TODO: MSTORE8 to MCOPY
                 .PUSH0 => |op| {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
@@ -560,7 +567,6 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
-                // TODO: I don't think ranges over enums are allowed here, can check later (simple example file elsewhere) not that important right now. It is funny that I end up unrolling this manually though.
                 // zig fmt: off
                 inline .PUSH1,  .PUSH2,  .PUSH3,  .PUSH4,  .PUSH5,  .PUSH6,  .PUSH7,  .PUSH8,
                        .PUSH9,  .PUSH10, .PUSH11, .PUSH12, .PUSH13, .PUSH14, .PUSH15, .PUSH16,
@@ -594,18 +600,48 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
+                // zig fmt: off
+                inline .DUP1, .DUP2,  .DUP3,  .DUP4,  .DUP5,  .DUP6,  .DUP7,  .DUP8,
+                       .DUP9, .DUP10, .DUP11, .DUP12, .DUP13, .DUP14, .DUP15, .DUP16
+                // zig fmt: on
+                => {
+                    // TODO
+                },
+                // zig fmt: off
+                inline .SWAP1, .SWAP2,  .SWAP3,  .SWAP4,  .SWAP5,  .SWAP6,  .SWAP7,  .SWAP8,
+                       .SWAP9, .SWAP10, .SWAP11, .SWAP12, .SWAP13, .SWAP14, .SWAP15, .SWAP16
+                // zig fmt: on
+                => {
+                    // TODO
+                },
+                .LOG0 => {
+                    // TODO
+                },
+                // zig fmt: off
+                inline .LOG1, .LOG2, .LOG3, .LOG4,
+                // zig fmt: on
+                => {
+                    // TODO
+                },
+                // TODO: CREATE onwards
                 .RETURN, .REVERT => |op| {
                     traceOp(op, self.pc, .endln);
+
+                    // s[0] = memory offset to read from ; s[1] = bytes to read
+
                     const offset = self.stack.pop();
                     const size = self.stack.pop();
+
                     self.return_data = try self.alloc.alloc(u8, @truncate(size));
+
                     if (offset < self.mem.items.len) {
                         const end = @min(offset + size, self.mem.items.len);
 
                         @memcpy(self.return_data[0..], self.mem.items[@truncate(offset)..end]);
                     }
-                    if (op == .REVERT)
-                        return error.Revert;
+
+                    if (op == .REVERT) return error.Revert;
+
                     return;
                 },
                 // TEMPORARY.
