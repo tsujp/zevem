@@ -534,11 +534,18 @@ test "basic MSTORE" {
     // incredible value is going to fail.
     const resize_error = basicBytecode("60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200");
     try expect(resize_error == error.OutOfMemory);
+
+    // Check overwritten memory is correctly zeroed.
+    // From: https://github.com/ethereum/go-ethereum/blob/32c6aa8a1a2595cbb89b05f93440d230841f8431/core/vm/instructions_test.go#L520
+    const overwrites = try basicBytecode("7fabcdef00000000000000abba000000000deaf000000c0de001000000001337005f5260015f5200");
+    try expect(overwrites.stack.len == 0);
+    try expect(overwrites.mem.items.len == 32);
+    try expect(std.mem.readInt(u256, overwrites.mem.items[0..32], .big) == 1);
 }
 
 test "basic RETURN" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then return.
-    const vm = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060ffF300");
+    const vm = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fff300");
     std.debug.print("vm.return_data = {any}, len = {d}\n", .{ vm.return_data, vm.return_data.len });
     try expect(vm.return_data.len == 32);
     for (vm.return_data) |i| {
@@ -550,7 +557,7 @@ test "basic REVERT" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then revert.
     var dummyEnv: DummyEnv = .{};
     var evm = try util.EVM.init(&dummyEnv);
-    const err = evm.execute(&util.htb("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060ffFd"));
+    const err = evm.execute(&util.htb("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fffd"));
     try expect(err == error.Revert);
     try expect(evm.return_data.len == 32);
     for (evm.return_data) |i| {
