@@ -513,6 +513,25 @@ test "basic KECCAK256" {
     // TODO:
 }
 
+test "basic BALANCE" {
+    // TODO:
+}
+
+test "basic POP" {
+    // Push 2 items, pop twice for great success!
+    const a = try basicBytecode("600161cafe505000");
+    try expect(a.stack.len == 0);
+
+    // Push 2 items, pop one leaving the first-pushed item at the top.
+    var b = try basicBytecode("61cafe61babe5000");
+    try expect(b.stack.len == 1);
+    try expect(b.stack.pop() == 0xcafe);
+
+    // Push 2 items, but then try and pop 3 times.
+    const c = basicBytecode("5f600150505000");
+    try expect(c == error.Pop);
+}
+
 test "basic MSTORE" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process.
     const vm1 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff5200");

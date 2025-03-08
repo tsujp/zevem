@@ -118,7 +118,7 @@ pub fn NewEVM(comptime Environment: type) type {
                     // TODO: Here and for other similar log with traceStackTake
 
                     // TODO: Here and elsewhere with simpler modulo logic is this compiled to a bitwise AND? (and for others as appropriate). Use of this form involves peer type resolution so any overheads etc need to be investigated.
-                    try self.stack.append(self.stack.pop() +% self.stack.pop());
+                    try self.stack.append(self.stack.pop().? +% self.stack.pop().?);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -126,7 +126,7 @@ pub fn NewEVM(comptime Environment: type) type {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
 
-                    try self.stack.append(self.stack.pop() *% self.stack.pop());
+                    try self.stack.append(self.stack.pop().? *% self.stack.pop().?);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -134,7 +134,7 @@ pub fn NewEVM(comptime Environment: type) type {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
 
-                    try self.stack.append(self.stack.pop() -% self.stack.pop());
+                    try self.stack.append(self.stack.pop().? -% self.stack.pop().?);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -143,8 +143,8 @@ pub fn NewEVM(comptime Environment: type) type {
                     self.pc += 1;
 
                     // s[0] = numerator ; s[1] = denominator.
-                    const numerator = self.stack.pop();
-                    const denominator = self.stack.pop();
+                    const numerator = self.stack.pop().?;
+                    const denominator = self.stack.pop().?;
 
                     // Stack items are unsigned-integers, Zig will do floored division automatically.
                     try self.stack.append(if (denominator == 0) 0 else (numerator / denominator));
@@ -157,8 +157,8 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = numerator ; s[1] = denominator.
                     // Both values treated as 2's complement signed 256-bit integers.
-                    const numerator: i256 = @bitCast(self.stack.pop());
-                    const denominator: i256 = @bitCast(self.stack.pop());
+                    const numerator: i256 = @bitCast(self.stack.pop().?);
+                    const denominator: i256 = @bitCast(self.stack.pop().?);
 
                     if (denominator == 0) {
                         try self.stack.append(0);
@@ -176,8 +176,8 @@ pub fn NewEVM(comptime Environment: type) type {
                     self.pc += 1;
 
                     // s[0] = numerator ; s[1] = denominator.
-                    const numerator = self.stack.pop();
-                    const denominator = self.stack.pop();
+                    const numerator = self.stack.pop().?;
+                    const denominator = self.stack.pop().?;
 
                     // Stack items are unsigned-integers, Zig will do floored division automatically.
                     try self.stack.append(if (denominator == 0) 0 else (numerator % denominator));
@@ -190,8 +190,8 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = numerator ; s[1] = denominator.
                     // Both values treated as 2's complement signed 256-bit integers.
-                    const numerator: i256 = @bitCast(self.stack.pop());
-                    const denominator: i256 = @bitCast(self.stack.pop());
+                    const numerator: i256 = @bitCast(self.stack.pop().?);
+                    const denominator: i256 = @bitCast(self.stack.pop().?);
 
                     try self.stack.append(if (denominator == 0) 0 else @bitCast(@rem(numerator, denominator)));
 
@@ -204,9 +204,9 @@ pub fn NewEVM(comptime Environment: type) type {
                     // s[0, 1] = addition operands ; s[2] = denominator.
                     // TODO: Definitely a nicer way of implementing this outside of u257 and an intCast; optimise for that later.
 
-                    const left: u257 = self.stack.pop();
-                    const right = self.stack.pop();
-                    const denominator = self.stack.pop();
+                    const left: u257 = self.stack.pop().?;
+                    const right = self.stack.pop().?;
+                    const denominator = self.stack.pop().?;
 
                     if (denominator == 0) {
                         try self.stack.append(0);
@@ -224,9 +224,9 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0, 1] = addition operands ; s[2] = denominator.
                     // TODO: Ditto on modulo optimisation.
-                    const left: u512 = self.stack.pop();
-                    const right = self.stack.pop();
-                    const denominator = self.stack.pop();
+                    const left: u512 = self.stack.pop().?;
+                    const right = self.stack.pop().?;
+                    const denominator = self.stack.pop().?;
 
                     if (denominator == 0) {
                         try self.stack.append(0);
@@ -246,8 +246,8 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = base ; s[1] = exponent.
 
-                    var base: DOUBLE_WORD = self.stack.pop();
-                    var exponent = self.stack.pop();
+                    var base: DOUBLE_WORD = self.stack.pop().?;
+                    var exponent = self.stack.pop().?;
 
                     var result: DOUBLE_WORD = 1;
 
@@ -285,7 +285,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // Extension is always done up to WORD size.
 
-                    const bytes = self.stack.pop() + 1;
+                    const bytes = self.stack.pop().? + 1;
 
                     // There's no room to extend s[1] so we can do nothing.
                     if (bytes > (BYTES_IN_WORD - 1)) {
@@ -293,7 +293,7 @@ pub fn NewEVM(comptime Environment: type) type {
                     }
 
                     // TODO: Optimise this as needed.
-                    const value = self.stack.pop();
+                    const value = self.stack.pop().?;
                     const msb = @as(u1, @truncate(value >> (u8Truncate(bytes) * 8) - 1));
 
                     // Not a negative two's complement number, nothing to do.
@@ -312,7 +312,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] < s[1]
 
-                    try self.stack.append(@intFromBool(self.stack.pop() < self.stack.pop()));
+                    try self.stack.append(@intFromBool(self.stack.pop().? < self.stack.pop().?));
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -322,7 +322,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] > s[1]
 
-                    try self.stack.append(@intFromBool(self.stack.pop() > self.stack.pop()));
+                    try self.stack.append(@intFromBool(self.stack.pop().? > self.stack.pop().?));
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -334,9 +334,9 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // zig fmt: off
                     try self.stack.append(@intFromBool(
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))
                             <
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))));
                     // zig fmt: on
 
                     continue :sw decodeOp(rom[self.pc]);
@@ -349,9 +349,9 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // zig fmt: off
                     try self.stack.append(@intFromBool(
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))
                             >
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop()))));
+                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))));
                     // zig fmt: on
 
                     continue :sw decodeOp(rom[self.pc]);
@@ -362,7 +362,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] == s[1]
 
-                    try self.stack.append(@intFromBool(self.stack.pop() == self.stack.pop()));
+                    try self.stack.append(@intFromBool(self.stack.pop().? == self.stack.pop().?));
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -372,7 +372,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] == 0
 
-                    try self.stack.append(@intFromBool(self.stack.pop() == 0));
+                    try self.stack.append(@intFromBool(self.stack.pop().? == 0));
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -383,7 +383,7 @@ pub fn NewEVM(comptime Environment: type) type {
                     // Bitwise: s[0] AND s[1]
 
                     // TODO: A bunch of these kinds of patterns can likely be optimised to just popping one element off, and then setting the top stack element. Optimise after BoundedArray is kept or changed.
-                    try self.stack.append(self.stack.pop() & self.stack.pop());
+                    try self.stack.append(self.stack.pop().? & self.stack.pop().?);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -393,7 +393,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // Bitwise: s[0] OR s[1]
 
-                    try self.stack.append(self.stack.pop() | self.stack.pop());
+                    try self.stack.append(self.stack.pop().? | self.stack.pop().?);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -403,7 +403,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // Bitwise: s[0] XOR s[1]
 
-                    try self.stack.append(self.stack.pop() ^ self.stack.pop());
+                    try self.stack.append(self.stack.pop().? ^ self.stack.pop().?);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -413,7 +413,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // Bitwise: NOT s[0]
 
-                    try self.stack.append(~self.stack.pop());
+                    try self.stack.append(~self.stack.pop().?);
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -423,7 +423,7 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = byte offset to take from ; s[1] = word value to be sliced
 
-                    const offset = self.stack.pop();
+                    const offset = self.stack.pop().?;
 
                     // s[0] above amount of bytes in WORD, shortcut response to 0.
                     if (offset >= BYTES_IN_WORD) {
@@ -452,17 +452,17 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = bits to shift by ; s[1] = value to be shifted
 
-                    const bits = self.stack.pop();
+                    const bits = self.stack.pop().?;
 
                     // Trying to shift left over 255 (WORD bits - 1) places shortcut to zero.
                     if (bits >= @typeInfo(WORD).int.bits) {
-                        _ = self.stack.pop(); // XXX: Ripe for top of stack set.
+                        _ = self.stack.pop().?; // XXX: Ripe for top of stack set.
                         try self.stack.append(0);
                         continue :sw decodeOp(rom[self.pc]);
                     }
 
                     // TODO: u8 being log2(u256) i.e. log2(WORD) is all the reflection on WORD worth it? Idea being maybe someone could (idk why) change WORD to.. u128 but then it wouldn't be the EVM (unless the spec changed) etc.
-                    try self.stack.append(self.stack.pop() << @as(u8, @truncate(bits)));
+                    try self.stack.append(self.stack.pop().? << @as(u8, @truncate(bits)));
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -472,16 +472,16 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = bits to shift by ; s[1] = value to be shifted
 
-                    const bits = self.stack.pop();
+                    const bits = self.stack.pop().?;
 
                     // Trying to shift right over 255 (WORD bits - 1) places shortcut to zero.
                     if (bits >= @typeInfo(WORD).int.bits) {
-                        _ = self.stack.pop();
+                        _ = self.stack.pop().?;
                         try self.stack.append(0);
                         continue :sw decodeOp(rom[self.pc]);
                     }
 
-                    try self.stack.append(self.stack.pop() >> @as(u8, @truncate(bits)));
+                    try self.stack.append(self.stack.pop().? >> @as(u8, @truncate(bits)));
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -492,8 +492,8 @@ pub fn NewEVM(comptime Environment: type) type {
                     // s[0] = bits to shift by ; s[1] = value to be shifted
                     // s[1] and result pushed to stack are treated as signed; s[0] is unsigned.
 
-                    const bits = self.stack.pop();
-                    const value = asSignedWord(self.stack.pop());
+                    const bits = self.stack.pop().?;
+                    const value = asSignedWord(self.stack.pop().?);
 
                     // Trying to shift right over 255 (WORD bits - 1) places shortcut...
                     if (bits >= @typeInfo(WORD).int.bits) {
@@ -525,8 +525,13 @@ pub fn NewEVM(comptime Environment: type) type {
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
                 },
                 // TODO: ORIGIN to BLOBBASEFEE
-                .POP => {
-                    // TODO
+                .POP => |op| {
+                    traceOp(op, self.pc, .endln);
+                    self.pc += 1;
+
+                    _ = self.stack.pop() orelse return error.Pop;
+
+                    continue :sw decodeOp(rom[self.pc]);
                 },
                 .MLOAD => {
                     // TODO
@@ -537,8 +542,8 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = memory offset to write from ; s[1] = value to write
 
-                    const offset = self.stack.pop();
-                    const value = self.stack.pop();
+                    const offset = self.stack.pop().?;
+                    const value = self.stack.pop().?;
 
                     // resize memory if need be
                     // NOTE: this should incur some extra gas cost
@@ -629,8 +634,8 @@ pub fn NewEVM(comptime Environment: type) type {
 
                     // s[0] = memory offset to read from ; s[1] = bytes to read
 
-                    const offset = self.stack.pop();
-                    const size = self.stack.pop();
+                    const offset = self.stack.pop().?;
+                    const size = self.stack.pop().?;
 
                     self.return_data = try self.alloc.alloc(u8, @truncate(size));
 

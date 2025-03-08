@@ -1,8 +1,14 @@
 .{
-    .name = "zevem",
+    .name = .zevem,
     .version = "0.0.0",
-    .minimum_zig_version = "0.14.0-dev.3028+cdc9d65b0",
+
+    .minimum_zig_version = "0.14.0",
+
+    // XXX: If you fork zevem you should delete this field and re-run `zig build` to get a new suggested fingerprint value.
+    .fingerprint = 0x24d9ea76eb8beba, // Changing this has security and trust implications.
+
     .dependencies = .{},
+
     .paths = .{
         "build.zig",
         "build.zig.zon",
