@@ -1,0 +1,5 @@
+{
+  "zig_exe_path": "/home/jammy/bin/zls",
+  "semantic_tokens": "partial",
+  "enable_build_on_save": true
+}
