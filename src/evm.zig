@@ -529,7 +529,7 @@ pub fn NewEVM(comptime Environment: type) type {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
 
-                    _ = self.stack.pop() orelse return error.Pop;
+                    _ = self.stack.pop().?;
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
@@ -612,7 +612,7 @@ pub fn NewEVM(comptime Environment: type) type {
                 => |op| {
                     // TODO: EVM yellowpaper lists very large added/deleted stack items for these, e.g. DUP10 deletes 10 stack items and adds 11. Is that _literally_ happening though, because it doesn't look like it or really make sense if it is.
                     traceOp(op, self.pc, .endln);
-                    try self.pc += 1;
+                    self.pc += 1;
 
                     // Offset vs DUP1 is index from top of stack + 1 to duplicate.
                     const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.DUP1);
