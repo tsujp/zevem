@@ -1,0 +1,51 @@
+#+TITLE: zevem
+
+Ethereum Virtual Machine (EVM) implemented in Zig -- /just/ the EVM.
+
+zevem is primarily designed to be embedded into a host Ethereum client but also *plans to* incorporate various developer-focused features like:
+
+1. Bytecode debugger (with worldstate via EVMC).
+2. Bytecode (dis)assembler.
+3. Solidity decompiler (NOTE: Extremely "maybe" since this will also require deep knowledge of how the Solidity compiler and it's various versions likes to compile things etc).
+
+** Status
+
+Pre-alpha work-in-progress. Currently only concerned about use within [[https://github.com/stateless-consensus/phant][Phant]] as the first host client (and therefore real-world proof of zevem's correct implementation etc). Contributions and ideation of course welcome (open an issue or contact via email for discussion beforehand please).
+
+See [[./PROJECT.org][zevem's project planning file]] for TODOs, further resources etc.
+
+** Build / Develop / Contribute
+
+The only real dependency is Zig =0.14.0=, everything is developer tooling.
+
+To build:
+
+#+begin_src sh
+zig build
+#+end_src
+
+To run all tests:
+
+#+begin_src sh
+zig build test
+#+end_src
+
+*** Developer Environments / Tooling
+
+The =.jam= /directory/ includes a =Containerfile= (aka. =Dockerfile=) for container-based workflows. It is primarily written for use with [[https://podman.io/][Podman]] but should also work with Docker. It is currently written for macOS hosts running containers; i.e. an implicit Linux-VM which itself is actually managing containers.
+
+The =jam= /file/ (shell-script) at the repository root can be used to build/create/run development containers. These are not based on "Development Containers" from Micro$oft as that specification, amongst others, are JSON-plagued overly complicated hellscapes.
+
+To build a container image with all zevem dependencies including extra utilities for general debugging:
+
+#+begin_src sh
+./jam make
+#+end_src
+
+To create and run the built container image, replacing any that may exist:
+
+#+begin_src sh
+./jam run
+#+end_src
+
+This repo's files are bind-mounted into the container at =/home/jammy/project= so no work is lost when deleting/re-building/re-creating (etc) the container so long as you stick within that bind-mounted directory.
