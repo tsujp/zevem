@@ -58,6 +58,13 @@ run_container ()
 }
 
 
+ssh_container ()
+{
+    local container_user="$(podman image inspect localhost/jam/"$JAM_NAME" --format "{{.User}}")"
+    podman exec -it -u "$container_user" "jam-$JAM_NAME" /bin/bash
+}
+
+
 while getopts "$JAM_OPTSTRING" opt; do
     printf '%s\n' "$opt"
     case $opt in
@@ -104,6 +111,10 @@ case "$JAM_TARGET" in
     run)
         puts "{create,start}-ing dev jam container $JAM_NAME...\n"
         run_container
+        ;;
+    ssh)
+        # We could use attach here since podman --init will manage a default session.
+        ssh_container
         ;;
     *)
         printf 'Uknown target: %s\n' "$JAM_TARGET"
