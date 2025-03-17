@@ -609,8 +609,17 @@ pub fn NewEVM(comptime Environment: type) type {
                 inline .DUP1, .DUP2,  .DUP3,  .DUP4,  .DUP5,  .DUP6,  .DUP7,  .DUP8,
                        .DUP9, .DUP10, .DUP11, .DUP12, .DUP13, .DUP14, .DUP15, .DUP16
                 // zig fmt: on
-                => {
-                    // TODO
+                => |op| {
+                    // TODO: EVM yellowpaper lists very large added/deleted stack items for these, e.g. DUP10 deletes 10 stack items and adds 11. Is that _literally_ happening though, because it doesn't look like it or really make sense if it is.
+                    traceOp(op, self.pc, .endln);
+                    try self.pc += 1;
+
+                    // Offset vs DUP1 is index from top of stack + 1 to duplicate.
+                    const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.DUP1);
+
+                    try self.stack.append(self.stack.get(offset));
+
+                    continue :sw decodeOp(rom[self.pc]);
                 },
                 // zig fmt: off
                 inline .SWAP1, .SWAP2,  .SWAP3,  .SWAP4,  .SWAP5,  .SWAP6,  .SWAP7,  .SWAP8,

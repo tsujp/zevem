@@ -562,6 +562,12 @@ test "basic MSTORE" {
     try expect(std.mem.readInt(u256, overwrites.mem.items[0..32], .big) == 1);
 }
 
+// TODO: Add super, super basic tests for PUSH0 .. PUSH32. Basically just one scenario per PUSHN because they are used in essentially every other test.
+
+test "basic DUP" {
+    // TODO:
+}
+
 test "basic RETURN" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then return.
     const vm = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fff300");
