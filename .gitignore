@@ -6,3 +6,6 @@ zig-out/
 /build/
 /build-*/
 /docgen_tmp/
+
+# Zig artifacts while not using dnf for whatever reason.
+.jam/zig-*.tar.*
