@@ -9,6 +9,7 @@
 
     .dependencies = .{},
 
+    // Only those relevant for zevem as a package.
     .paths = .{
         "build.zig",
         "build.zig.zon",

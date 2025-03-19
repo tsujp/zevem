@@ -1,22 +1,175 @@
 #+TITLE: zevem project information
 
-* TODO Finish repo update to zig 0.14.0
+* Building
+
+** Zig Build Modes
+
+Docs: https://ziglang.org/documentation/0.14.0/#toc-Build-Mode
+
+| Mode         | Optimise  | Safety | Runtime Sp. | Repro. | Bin Size |
+|--------------+-----------+--------+-------------+--------+----------|
+| Debug        | Off       | On     | Slow        | No     | Large    |
+| ReleaseFast  | On        | Off    | Fast        | Yes    | Large    |
+| ReleaseSafe  | On        | On     | Medium      | Yes    | Large    |
+| ReleaseSmall | On (size) | Off    | Medium      | Yes    | Small    |
+
+** Zig Build System
+
+Docs: https://ziglang.org/documentation/0.14.0/#Zig-Build-System
+Docs: https://ziglang.org/learn/build-system/
+
+* TODO Zig 0.14.0 Update & Notes
 
 It currently does run correctly, but things like GPA being renamed and ArrayLists being unmanaged by default now and the like need to be accounted for.
 
-* TODO Add a just recipe for andrewrk's basic zig benchmark tool
+Release notes: https://ziglang.org/download/0.14.0/release-notes.html
+
+** Misc
+
+- Non-aggregate types are those for which the ~==~ is allowed.
+- Global variables can be initialised with the address of each other.
+- ~@src~ (=std.builtin.SourceLocation=) has =module= field now.
+- =std.c= re-org: https://ziglang.org/download/0.14.0/release-notes.html#stdc-Reorganization
+
+Deprecation list: https://ziglang.org/download/0.14.0/release-notes.html#List-of-Deprecations
+
+** TODO Language
+
+*** Labelled Switch
+https://ziglang.org/download/0.14.0/release-notes.html#Labeled-Switch
+
+Already in-use, some central notes though:
+- ~switch~ statement can be labeled, ~continue~ within such statements takes single operand which is treated as replacement for enclosing switch expressions operand thus explicitly stating the next prong to execute.
+- Can ~break~ from labeled switch which terminates its evaluation causing it to result in the given value to ~break~. The ~break~ must be given the switch's label to target it similarly to breaking out of blocks.
+- Labeled switches are *not* implicitly evaluated at comptime but such can be forced with the ~comptime~ keyword.
+- Semantically equivalent to switch inside a loop where a variable tracks switch operand and said variable is modified in each prong to control the subsequent prong to be executed.
+
+Labeled switch designed to improve code-generation for hot loops such as those which dispatch instructions.
+
+If operand to ~continue~ is comptime-known it is translated to an unconditional branch; this is a "perfectly predicted" branch and is very fast.
+
+If operand to ~continue~ is runtime-known each continue can become a seperate conditional branch (ideally via shared jump table) back to the same set of conditional branch targets. This aids the CPU branch predictor by associating different branch instructions and their prediction data.
+
+Zig's tokeniser is 13% faster with labeled switches: https://github.com/ziglang/zig/pull/21367
+
+**** TODO How to check and force that the jump table is shared for labeled switch runtime-known conditional branches?
+
+Is the only implication of it NOT being shared that the binary size is larger due to duplicated jump tables? It should still be just as fast since it's the same jump table data-wise no?
+
+*** TODO Decl Literals
+https://ziglang.org/download/0.14.0/release-notes.html#Decl-Literals
+
+Read the release notes but didn't take notes on these, so do that.
+
+*** TODO @export Operand Pointer
+https://ziglang.org/download/0.14.0/release-notes.html#export-Operand-is-Now-a-Pointer
+
+*** TODO @branchHint Replaces @setCold
+https://ziglang.org/download/0.14.0/release-notes.html#New-branchHint-Builtin-Replacing-setCold
+
+*** TODO Remove Anonymous Struct Types, Unify Tuples
+https://ziglang.org/download/0.14.0/release-notes.html#Remove-Anonymous-Struct-Types-Unify-Tuples
+
+*** @FieldType Builtin
+https://ziglang.org/download/0.14.0/release-notes.html#FieldType-builtin
+
+Similar to ~std.meta.FieldType~, give a type and the name of one of it's fields and get back the type of that field.
+
+*** TODO @memcpy Rules Adjusted
+https://ziglang.org/download/0.14.0/release-notes.html#memcpy-Rules-Adjusted
+
+** TODO Standard Library
+
+*** TODO GeneralPurposeAllocator is now DebugAllocator
+https://ziglang.org/download/0.14.0/release-notes.html#DebugAllocator
+
+READ THIS ONE DONE MAKING THE TODOs.
+
+*** TODO SmpAllocator
+https://ziglang.org/download/0.14.0/release-notes.html#SmpAllocator
+
+*** TODO Allocator API
+https://ziglang.org/download/0.14.0/release-notes.html#Allocator-API-Changes-remap
+
+*** TODO Zon Parsing
+https://ziglang.org/download/0.14.0/release-notes.html#ZON-Parsing-and-Serialization
+
+*** TODO Runtime Page Size
+https://ziglang.org/download/0.14.0/release-notes.html#Runtime-Page-Size
+
+*** TODO process.Child.collectOutput API
+https://ziglang.org/download/0.14.0/release-notes.html#processChildcollectOutput-API-Changed
+
+*** LLVM Builder API
+https://ziglang.org/download/0.14.0/release-notes.html#LLVM-Builder-API
+
+Zig's LLVM bitcode builder is now available at =std.zig.llvm=. Note that everything in the =std.zig= namespace is an implementation detail of the Zig compiler and isn't subject to the same API stability and deprecation norms as the rest of =std=.
+
+*** TODO Unmanaged Containers
+https://ziglang.org/download/0.14.0/release-notes.html#Embracing-Unmanaged-Style-Containers
+
+READ THIS ONE WHEN DONE MAKING TODOs.
+
+*** Better Binary Search API
+https://github.com/ziglang/zig/pull/20927
+
+For: =std.sort.binarySort=, =std.sort.lowerBound=, =std.sort.upperBound=, and =std.sort.equalRange=.
+
+*** std.hash_map Rehash Method
+https://ziglang.org/download/0.14.0/release-notes.html#stdhash_map-gains-a-rehash-method
+
+Currently unordered hash maps become slow when items are removed from them, in future Zig versions this will be fixed.
+
+Array hash maps are free of this flaw.
+
+** TODO Build System
+https://ziglang.org/download/0.14.0/release-notes.html#Build-System
+
+READ THIS ONE WHEN DONE MAKING TODOs:
+- File System Watching
+- New Package Hash Format
+- WriteFile Step
+- RemoveDir Step
+- Fmt Step
+- Creating Artifacts from Existing Modules
+- Allow Packages to Expose Arbitrary LazyPaths by Name
+- addLibrary Function
+
+** TODO Compiler
+https://ziglang.org/download/0.14.0/release-notes.html#Compiler
+
+- Comptime import ZON.
+- tokenizer: simplification and spec conformance
+
+** TODO Linker
+https://ziglang.org/download/0.14.0/release-notes.html#Linker
+
+** TODO Fuzzer
+https://ziglang.org/download/0.14.0/release-notes.html#Fuzzer
+
+** TODO UBSan Runtime
+https://ziglang.org/download/0.14.0/release-notes.html#UBSan-Runtime
+
+Maybe (if things like tracy or valgrind for whatever reason aren't good enough, which I doubt) how UBSan modifies things at compile time could be an approach for instrumentation etc etc. Again, doubt it since tracy/valgrind.
+
+* Misc TODOs
+:PROPERTIES:
+:visibility: outline
+:END:
+
+** TODO Add a just recipe for andrewrk's basic zig benchmark tool
 
 It's called poop or something, get a recipe for that and execute it to start basic benchmarking shit.
 
-* TODO Have a look at Zig's source code for labelled switch usage
+** TODO Have a look at Zig's source code for labelled switch usage
 
 As part of adding tracy have a look at any non-trivial ways Zig's own source is using labelled switches, mostly I'm curious about putting things like stack variable checks in what is currently decodeOp which is run as part of (almost) every continue statement. In that sense it functions similarly to the top of a while loop which is followed by a switch statement, except our usage of a labelled switch here keeps cpu branch predictability performance gains.
 
-* TODO Finish Jam script
+** TODO Finish Jam script
 
 It's fine for now, mostly a skeleton and should probably symlink to a central one for sharing and/or make it a little CLI tool for easier consumption. We'll see.
 
-* TODO Custom error added on POP instruction, but do we want such errors?
+** TODO Custom error added on POP instruction, but do we want such errors?
 
 Do we expect that any bytecode given to us is free from such errors and simply crash hard if encountered or do we surface those to the host? The compiled code is already going to check since Zig by default provides that ~orelse unreachable~ if we don't specify anything. This could be a compile option (our custom errors) if there is in-fact any overhead and if in-fact we want to continue down that path.
 
@@ -24,11 +177,11 @@ Another thing to note is that.. what makes POP so special? What about DUP now.. 
 
 Things like trying to expand memory and that being an error we do surface (RETURN/REVERT) because that's our job as the VM -- thus, a difference in semantics I suppose.
 
-* TODO Comptime test generation for opcodes?
+** TODO Comptime test generation for opcodes?
 
 E.g. generate tests for all of the N-style opcodes PUSH-N, DUP-N etc. Doesn't really feel worth it versus literally writing them.
 
-* TODO Test cases described in Zon?
+** TODO Test cases described in Zon?
 
 Maybe something like:
 
@@ -43,15 +196,15 @@ Maybe something like:
 }
 #+end_src
 
-* TODO Containerfile appropriate for Linux hosts too
+** TODO Containerfile appropriate for Linux hosts too
 
 All the uid mapping shit probably not required on Linux hosts since it's not going macOS <==> Linux-VM <==> container with the macOS uid/gid being the ones we want to maintain.
 
-* TODO Maybe change to using Just for project commands
+** TODO Maybe change to using Just for project commands
 
 Problem is when you want to do a lot of shell-stuff Just executes each line of the recipe in it's own shell so if you have variables, or need the output of a prior command you need to have a recipe that is basically a heredoc shell script by adding #!/usr/bin/env bash to it.. at that point I'd rather just use a shell script directly.
 
-* Old project-todo.org file contents dumped within
+** Old project-todo.org file contents dumped within
 :PROPERTIES:
 :VISIBILITY: folded
 :END:
