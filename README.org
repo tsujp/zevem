@@ -18,17 +18,21 @@ See [[./PROJECT.org][zevem's project planning file]] for TODOs, further resource
 
 The only real dependency is Zig =0.14.0=, everything is developer tooling.
 
+A [[./justfile][justfile]] (see: [[https://github.com/casey/just][Just]]) provides simpler access to common project commands. Execute ~just~ anywhere within this project repo to see a list of available commands, common ones are:
+
 To build:
 
 #+begin_src sh
-zig build
+just build
 #+end_src
 
 To run all tests:
 
 #+begin_src sh
-zig build test
+just test
 #+end_src
+
+The justfile is configured (by default) to echo the commands it executes; it's syntax is very readable however and is mostly a convenient alias for various Zig build-system commands.
 
 *** Developer Environments / Tooling
 

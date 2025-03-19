@@ -4,6 +4,14 @@
 
 It currently does run correctly, but things like GPA being renamed and ArrayLists being unmanaged by default now and the like need to be accounted for.
 
+* TODO Add a just recipe for andrewrk's basic zig benchmark tool
+
+It's called poop or something, get a recipe for that and execute it to start basic benchmarking shit.
+
+* TODO Have a look at Zig's source code for labelled switch usage
+
+As part of adding tracy have a look at any non-trivial ways Zig's own source is using labelled switches, mostly I'm curious about putting things like stack variable checks in what is currently decodeOp which is run as part of (almost) every continue statement. In that sense it functions similarly to the top of a while loop which is followed by a switch statement, except our usage of a labelled switch here keeps cpu branch predictability performance gains.
+
 * TODO Finish Jam script
 
 It's fine for now, mostly a skeleton and should probably symlink to a central one for sharing and/or make it a little CLI tool for easier consumption. We'll see.
@@ -15,6 +23,25 @@ Do we expect that any bytecode given to us is free from such errors and simply c
 Another thing to note is that.. what makes POP so special? What about DUP now.. what about every single other opcode? I think /for now/ I may remove the POP custom error logic because it feels like the compiler that is feeding us bytecode, or the adept user who is handwriting such, should be responsible for that.
 
 Things like trying to expand memory and that being an error we do surface (RETURN/REVERT) because that's our job as the VM -- thus, a difference in semantics I suppose.
+
+* TODO Comptime test generation for opcodes?
+
+E.g. generate tests for all of the N-style opcodes PUSH-N, DUP-N etc. Doesn't really feel worth it versus literally writing them.
+
+* TODO Test cases described in Zon?
+
+Maybe something like:
+
+#+begin_src zig
+.{
+    // .bc for bytecode, .s for stack .s.l stack length, .s.i stack items from top etc.
+    .bc = "5f600a8100",
+    .s = .{
+        .l = 0,
+        .i = .{ 0, 0xa }
+    }
+}
+#+end_src
 
 * TODO Containerfile appropriate for Linux hosts too
 
