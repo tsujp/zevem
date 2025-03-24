@@ -5,6 +5,7 @@ const DummyEnv = util.DummyEnv;
 const bc = util.htb;
 const std = @import("std");
 const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
 
 // TODO: Tests should assert stack size changes, and maybe also gas cost (for the basic ones).
 // TODO: Assembler from some basic instruction format because long strings like this are shit.
@@ -566,7 +567,41 @@ test "basic MSTORE" {
 // TODO: Add super, super basic tests for PUSH0 .. PUSH32. Basically just one scenario per PUSHN because they are used in essentially every other test.
 
 test "basic DUP" {
-    // TODO:
+    // DUP1
+    var d01_a = try basicBytecode("5f8000");
+    try expectEqual(d01_a.stack.pop(), 0);
+
+    var d01_b = try basicBytecode("5f60018000");
+    try expectEqual(d01_b.stack.pop(), 1);
+
+    var d01_c = try basicBytecode("5f80808000");
+    try expectEqual(d01_c.stack.len, 4);
+    try expectEqual(d01_c.stack.pop(), 0);
+
+    // DUP2
+    var d02_a = try basicBytecode("60025f8100");
+    try expectEqual(d02_a.stack.pop(), 2);
+
+    var d02_b = try basicBytecode("5f60025f8100");
+    try expectEqual(d02_b.stack.pop(), 2);
+
+    // DUP3
+    var d03_a = try basicBytecode("600c600a5f8200");
+    try expectEqual(d03_a.stack.pop(), 0xc);
+
+    // DUP4
+    // DUP5
+    // DUP6
+    // DUP7
+    // DUP8
+    // DUP9
+    // DUP10
+    // DUP11
+    // DUP12
+    // DUP13
+    // DUP14
+    // DUP15
+    // DUP16
 }
 
 test "basic RETURN" {

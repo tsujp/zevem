@@ -618,7 +618,7 @@ pub fn NewEVM(comptime Environment: type) type {
                     // Offset vs DUP1 is index from top of stack + 1 to duplicate.
                     const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.DUP1);
 
-                    try self.stack.append(self.stack.get(offset));
+                    try self.stack.append(self.stack.get(self.stack.len - offset));
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
