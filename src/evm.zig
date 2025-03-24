@@ -55,7 +55,8 @@ pub fn NewEVM(comptime Environment: type) type {
         // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later.
         pc: usize,
 
-        mem: std.ArrayList(u8),
+        // TODO: Zig 0.14.0 deprecates managed container types. Unmanaged container types must pass the same allocator at the callsite for methods which require it and do so every time. Perhaps create a wrapper (or appropriate custom type) later on to ease this (potential) burden. Zig std ArrayHashMapWithAllocator is an example of such.
+        mem: std.ArrayListUnmanaged(u8),
 
         alloc: std.mem.Allocator,
 
@@ -64,7 +65,7 @@ pub fn NewEVM(comptime Environment: type) type {
         // TODO: Specialised allocators later on, perhaps external allocators passed in from host (where we're potentially embedded).
         // pub fn init(alloc: std.mem.Allocator) !Self {
         pub fn init(env: *Environment) !Self {
-            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            var gpa: std.heap.DebugAllocator(.{}) = .init;
             const allocator = gpa.allocator();
 
             return Self{
@@ -72,7 +73,7 @@ pub fn NewEVM(comptime Environment: type) type {
                 .pc = 0,
                 .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
                 .env = env,
-                .mem = std.ArrayList(u8).init(allocator),
+                .mem = .empty,
                 .return_data = &[0]u8{},
             };
         }
@@ -556,7 +557,7 @@ pub fn NewEVM(comptime Environment: type) type {
                         const old_size = self.mem.items.len;
                         // GUILLAUME: Note that this will potentially OOM if the offset is too large.
                         // This is ok, because it's meant to be capped by the gas cost.
-                        try self.mem.resize(memsize_usize);
+                        try self.mem.resize(self.alloc, memsize_usize);
                         @memset(self.mem.items[old_size..@truncate(offset)], 0);
                     }
                     std.mem.writeInt(u256, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), value, .big);

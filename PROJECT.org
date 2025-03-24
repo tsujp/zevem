@@ -59,7 +59,7 @@ Is the only implication of it NOT being shared that the binary size is larger du
 *** TODO Decl Literals
 https://ziglang.org/download/0.14.0/release-notes.html#Decl-Literals
 
-Read the release notes but didn't take notes on these, so do that.
+READ NEXT AFTER TODOs CREATED.
 
 *** TODO @export Operand Pointer
 https://ziglang.org/download/0.14.0/release-notes.html#export-Operand-is-Now-a-Pointer
@@ -80,10 +80,12 @@ https://ziglang.org/download/0.14.0/release-notes.html#memcpy-Rules-Adjusted
 
 ** TODO Standard Library
 
-*** TODO GeneralPurposeAllocator is now DebugAllocator
+*** GeneralPurposeAllocator is now DebugAllocator
 https://ziglang.org/download/0.14.0/release-notes.html#DebugAllocator
 
-READ THIS ONE DONE MAKING THE TODOs.
+=GeneralPurposeAllocator= used to rely on compile-time known page size (now removed as nonsensical). Now rewritten to make fewer active mappings and have better performance it is also renamed =DebugAllocator=.
+
+Note: initialise with ~.init~ declaration literal and not ~.{}~ now.
 
 *** TODO SmpAllocator
 https://ziglang.org/download/0.14.0/release-notes.html#SmpAllocator
@@ -105,10 +107,12 @@ https://ziglang.org/download/0.14.0/release-notes.html#LLVM-Builder-API
 
 Zig's LLVM bitcode builder is now available at =std.zig.llvm=. Note that everything in the =std.zig= namespace is an implementation detail of the Zig compiler and isn't subject to the same API stability and deprecation norms as the rest of =std=.
 
-*** TODO Unmanaged Containers
+*** Unmanaged Containers
 https://ziglang.org/download/0.14.0/release-notes.html#Embracing-Unmanaged-Style-Containers
 
-READ THIS ONE WHEN DONE MAKING TODOs.
+- Managed container types (which internally associate an allocator for their lifetime) are deprecated and will be removed in the next Zig version (0.15.0).
+- Unmanaged container types are now the norm and require passing (the same) allocator at every callsite where such a method requires it.
+- Zig stdlib =ArrayHashMapWithAllocator= happens to have an implementation of a "traditional" managed-style approach which (I think) is intended for the future. Unsure if that will also be discouraged / deprecated in 0.15.0 (as in, within stdlib itself). As users we're free to create our own managed-style approaches.
 
 *** Better Binary Search API
 https://github.com/ziglang/zig/pull/20927
