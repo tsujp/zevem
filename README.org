@@ -2,9 +2,9 @@
 
 Ethereum Virtual Machine (EVM) implemented in Zig -- /just/ the EVM.
 
-zevem is primarily designed to be embedded into a host Ethereum client but also *plans to* incorporate various developer-focused features like:
+zevem is primarily designed to be embedded into a host Ethereum client as a library but also *plans to* incorporate various developer-focused features like:
 
-1. Bytecode debugger (with worldstate via EVMC).
+1. Bytecode debugger (with worldstate via EVMC if not library).
 2. Bytecode (dis)assembler.
 3. Solidity decompiler (NOTE: Extremely "maybe" since this will also require deep knowledge of how the Solidity compiler and it's various versions likes to compile things etc).
 
