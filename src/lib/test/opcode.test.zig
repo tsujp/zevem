@@ -1,17 +1,16 @@
-// TODO: Better pattern here? Idk, you can take DRY too far.
-// const util = @import("../util.zig");
-// const util = @import("../../zevem.zig").util;
-const zevem = @import("../../zevem.zig");
-const util = zevem.util;
-const EVM = zevem.EVM;
-// const evmError = @import("../evm.zig").EvmError;
-const basicBytecode = util.evmBasicBytecode;
-// const DummyEnv = util.DummyEnv;
-const DummyEnv = @import("../DummyEnv.zig");
-const bc = util.htb;
 const std = @import("std");
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
+
+const zevem = @import("zevem");
+const util = zevem.util;
+const EVM = zevem.EVM;
+const basicBytecode = util.evmBasicBytecode;
+
+// const evmError = @import("../evm.zig").EvmError;
+
+// TODO: The same for this or move to that better API pattern I tore my hair out trying to do.
+const DummyEnv = @import("../DummyEnv.zig");
 
 // TODO: Tests should assert stack size changes, and maybe also gas cost (for the basic ones).
 // TODO: Assembler from some basic instruction format because long strings like this are shit.

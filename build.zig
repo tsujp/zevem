@@ -25,6 +25,9 @@ pub fn build(b: *std.Build) !void {
         .root_module = lib_mod,
     });
 
+    // Add lib_mod to itself (lib_mod) as an importable module called "zevem" so that in test files we can simply `@import("zevem")` instead of having to `@import("../../zevem.zig");` which would depend on the location of the test file in-question.
+    lib_mod.addImport("zevem", lib_mod);
+
     const test_step = b.step("test", "Unit test zevem");
     const run_test_cmd = b.addRunArtifact(lib_test);
     test_step.dependOn(&run_test_cmd.step);
