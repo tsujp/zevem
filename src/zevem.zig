@@ -2,7 +2,7 @@ const std = @import("std");
 const evm = @import("lib/evm.zig");
 const DummyEnv = @import("lib/DummyEnv.zig");
 
-test "bingbong" {
+test {
     std.testing.refAllDeclsRecursive(@This());
 
     _ = @import("lib/test.zig");
