@@ -1,7 +1,13 @@
 // TODO: Better pattern here? Idk, you can take DRY too far.
-const util = @import("../util.zig");
+// const util = @import("../util.zig");
+// const util = @import("../../zevem.zig").util;
+const zevem = @import("../../zevem.zig");
+const util = zevem.util;
+const EVM = zevem.EVM;
+// const evmError = @import("../evm.zig").EvmError;
 const basicBytecode = util.evmBasicBytecode;
-const DummyEnv = util.DummyEnv;
+// const DummyEnv = util.DummyEnv;
+const DummyEnv = @import("../DummyEnv.zig");
 const bc = util.htb;
 const std = @import("std");
 const expect = std.testing.expect;
@@ -617,9 +623,10 @@ test "basic RETURN" {
 test "basic REVERT" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then revert.
     var dummyEnv: DummyEnv = .{};
-    var evm = try util.EVM.init(&dummyEnv);
+    var evm = try EVM.init(&dummyEnv);
     const err = evm.execute(&util.htb("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fffd"));
     try expect(err == error.Revert);
+    // try expect(evm == error.Revert);
     try expect(evm.return_data.len == 32);
     for (evm.return_data) |i| {
         try expect(i == 0xff);

@@ -1,51 +1,49 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const Build = std.Build;
 
-pub fn build(b: *Build) void {
+// TODO: Options to build zevem as either a library for consumption versus its own standalone "tooling" mode which is the same but would have a slower interface by nature of not being embedded into a host program. Still unsure if normal b.addLibrary and so forth cover this or are "blanket" approaches. See addInstallArtifact which could be of use there.
+// TODO: Add git commit hash and project semver into package version when compiled.
+// TODO: builtin.output_mode approach could be useful, something to look at when zevem is much further along. https://ziglang.org/documentation/0.14.0/std/#builtin.output_mode -- ghostty also takes that approach.
+// TODO: Ghostty build approach is rather complex, MIGHT be good inspiration if warranted in the future.
+// TODO: "zevem" as a named import for tests to use instead of "../../zevem.zig"?
+
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    _ = b.addModule("zevem", Build.Module.CreateOptions{
-        .root_source_file = b.path("src/evm.zig"),
+    // const enable_tracy = b.option(bool, "tracy", "Enable Tracy profiling") orelse false;
+    const want_binary = b.option(bool, "with-binary", "Also build zevem binary") orelse true;
+
+    // TODO: I think createModule is correct here, addModule does the same but also adds the module to this package's module set so our dependents can access it but AFAIU that would be for dependencies _this_ package has that we want to allow our dependents (consumers) to also have access to (e.g. for config or whatever).
+    const lib_mod = b.createModule(.{
+        .root_source_file = b.path("src/zevem.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
-        .name = "zevem",
-        .root_source_file = b.path("src/evm.zig"),
-        .target = target,
-        .optimize = optimize,
+    const lib_test = b.addTest(.{
+        .root_module = lib_mod,
     });
-    b.installArtifact(lib);
-
-    const bin = b.addExecutable(.{
-        .name = "zevem",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const run_cmd = b.addRunArtifact(bin);
-
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    const run_step = b.step("run", "Execute zevem");
-    run_step.dependOn(&run_cmd.step);
-
-    const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/test.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const run_unit_tests_cmd = b.addRunArtifact(unit_tests);
 
     const test_step = b.step("test", "Unit test zevem");
-    test_step.dependOn(&run_unit_tests_cmd.step);
+    const run_test_cmd = b.addRunArtifact(lib_test);
+    test_step.dependOn(&run_test_cmd.step);
+
+    if (want_binary) {
+        const exe_mod = b.createModule(.{
+            .root_source_file = b.path("src/cli.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const exe = b.addExecutable(.{
+            .name = "zevem",
+            .root_module = exe_mod,
+        });
+
+        // Generate zevem cli binary.
+        b.installArtifact(exe);
+    }
 }
 
 // comptime {

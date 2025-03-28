@@ -7,6 +7,9 @@
     // XXX: If you fork zevem you should delete this field and re-run `zig build` to get a new suggested fingerprint value.
     .fingerprint = 0x24d9ea76eb8beba, // Changing this has security and trust implications.
 
+    // .dependencies = .{
+    //     .tracy = "zig-tracy",
+    // },
     .dependencies = .{},
 
     // Only those relevant for zevem as a package.
@@ -15,6 +18,6 @@
         "build.zig.zon",
         "src",
         "LICENCE",
-        "README.md",
+        "README.org",
     },
 }

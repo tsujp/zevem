@@ -40,7 +40,11 @@ fn traceOpPush(pc: usize, operand: WORD) void {
 // Meant to print _additional_ information for opcodes which take 2 items off the stack then put 1 back on.
 fn traceStackTake() void {}
 
-pub fn NewEVM(comptime Environment: type) type {
+pub const EvmError = error{
+    Revert,
+};
+
+pub fn New(comptime Environment: type) type {
     return struct {
         const Self = @This();
         // TODO: ROM context.
@@ -655,7 +659,8 @@ pub fn NewEVM(comptime Environment: type) type {
                         @memcpy(self.return_data[0..], self.mem.items[@truncate(offset)..end]);
                     }
 
-                    if (op == .REVERT) return error.Revert;
+                    // if (op == .REVERT) return error.Revert;
+                    if (op == .REVERT) return EvmError.Revert;
 
                     return;
                 },

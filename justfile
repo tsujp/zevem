@@ -12,10 +12,10 @@ default:
 [doc]
 [group: 'build']
 build:
-    zig build
+    zig build --summary all
 
 # TODO: What extra flags to zig build test do we want to pass (if any).
 [doc]
 [group: 'test']
 test:
-    zig build test
+    zig build test --summary all

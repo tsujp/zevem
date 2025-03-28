@@ -128,6 +128,7 @@ Array hash maps are free of this flaw.
 
 ** TODO Build System
 https://ziglang.org/download/0.14.0/release-notes.html#Build-System
+https://ziglang.org/learn/build-system/
 
 READ THIS ONE WHEN DONE MAKING TODOs:
 - File System Watching
@@ -135,9 +136,20 @@ READ THIS ONE WHEN DONE MAKING TODOs:
 - WriteFile Step
 - RemoveDir Step
 - Fmt Step
-- Creating Artifacts from Existing Modules
-- Allow Packages to Expose Arbitrary LazyPaths by Name
-- addLibrary Function
+
+*** Creating Artifacts from Existing Modules
+https://ziglang.org/download/0.14.0/release-notes.html#Creating-Artifacts-from-Existing-Modules
+
+=Compile= steps can be created from existing =std.Build.Module= objects. Easier to re-use now, e.g. a module which is a dependency of another can more easily have a test step created for it.
+
+New APIs change usage of =addExecutable=, =addTest= etc. No longer pass =root_source_file=, =target=, =optimize= (etc) directly but a =*std.Build.Module= to the =root_module= field with said module taking aforementioned options instead.
+
+*** TODO Allow Packages to Expose Arbitrary LazyPaths by Name
+
+*** addLibrary Function
+https://ziglang.org/download/0.14.0/release-notes.html#addLibrary-Function
+
+=addLibrary= replaces =addSharedLibrary= and =addStaticLibrary=.
 
 ** TODO Compiler
 https://ziglang.org/download/0.14.0/release-notes.html#Compiler
@@ -207,6 +219,10 @@ All the uid mapping shit probably not required on Linux hosts since it's not goi
 ** TODO Maybe change to using Just for project commands
 
 Problem is when you want to do a lot of shell-stuff Just executes each line of the recipe in it's own shell so if you have variables, or need the output of a prior command you need to have a recipe that is basically a heredoc shell script by adding #!/usr/bin/env bash to it.. at that point I'd rather just use a shell script directly.
+
+** TODO Fuzzing with AFL++
+
+Haven't looked into fuzzing approaches yet; just found this while browsing other Zig things and it could be beneficial later: https://github.com/AFLplusplus/AFLplusplus and for Zig: https://github.com/kristoff-it/zig-afl-kit?tab=readme-ov-file
 
 ** Old project-todo.org file contents dumped within
 :PROPERTIES:
