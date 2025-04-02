@@ -70,15 +70,16 @@ pub fn New(comptime Environment: type) type {
 
         // TODO: Specialised allocators later on, perhaps external allocators passed in from host (where we're potentially embedded).
         // pub fn init(alloc: std.mem.Allocator) !Self {
-        pub fn init(env: *Environment) !Self {
-            var gpa: std.heap.DebugAllocator(.{}) = .init;
-            const allocator = gpa.allocator();
+        pub fn init(alloc: std.mem.Allocator, env: *Environment) !Self {
+            // var gpa: std.heap.DebugAllocator(.{}) = .init;
+            // const allocator = gpa.allocator();
 
             // var tracing_alloc = tracy.TracingAllocator.init(std.heap.page_allocator);
             // const allocator = tracing_alloc.allocator();
 
             return Self{
-                .alloc = allocator,
+                // .alloc = allocator,
+                .alloc = alloc,
                 .pc = 0,
                 .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
                 .env = env,

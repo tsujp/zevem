@@ -622,7 +622,11 @@ test "basic RETURN" {
 test "basic REVERT" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then revert.
     var dummyEnv: DummyEnv = .{};
-    var evm = try EVM.init(&dummyEnv);
+
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = gpa.allocator();
+
+    var evm = try EVM.init(allocator, &dummyEnv);
     const err = evm.execute(&util.htb("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fffd"));
     try expect(err == error.Revert);
     // try expect(evm == error.Revert);

@@ -25,7 +25,11 @@ pub const util = struct {
     // TODO: Probably also want some re-usable one to avoid re-allocating every single time in these unit tests? But fresh context is important, but also testing properly is important.
     pub fn evmBasicBytecode(comptime bytes: []const u8) !EVM {
         var dummyEnv: DummyEnv = .{};
-        var evm_dummy = try EVM.init(&dummyEnv);
+
+        var gpa: std.heap.DebugAllocator(.{}) = .init;
+        const allocator = gpa.allocator();
+
+        var evm_dummy = try EVM.init(allocator, &dummyEnv);
         try evm_dummy.execute(&htb(bytes));
 
         return evm_dummy;
