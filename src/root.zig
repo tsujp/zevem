@@ -1,6 +1,8 @@
+//! Library (zevem) root.
+
 const std = @import("std");
 const evm = @import("lib/evm.zig");
-const DummyEnv = @import("lib/DummyEnv.zig");
+pub const DummyEnv = @import("lib/DummyEnv.zig");
 
 test {
     std.testing.refAllDeclsRecursive(@This());

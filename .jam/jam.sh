@@ -54,6 +54,7 @@ run_container ()
 	       --volume /run/host/"$JAM_CONTEXT":/home/"$container_user"/project \
 	       --hostname "jam-$JAM_NAME" \
 	       --name "jam-$JAM_NAME" \
+           --network=host \
 	       localhost/jam/"$JAM_NAME"
 }
 

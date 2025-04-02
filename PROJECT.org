@@ -177,6 +177,14 @@ Maybe (if things like tracy or valgrind for whatever reason aren't good enough, 
 
 Perhaps as a tagged enum? I forgot the proper term for this, have to double check notes. Either way want to replace the implicit error return of EVM.execute() from !void to somethin explicit.
 
+** TODO Maybe a less verbose and/or more detailed tracing guide in zevem README
+
+It's fine for now probably.
+
+** TODO Perhaps bench the old decodeOp before the change to log opcode via tracy
+
+Yeah some overhead is added but how much idk, use poop or something to retroactively do this. Circa 2025-04-01 is when change to decodeOp occured (with tracy addition and so on).
+
 ** TODO Add a just recipe for andrewrk's basic zig benchmark tool
 
 It's called poop or something, get a recipe for that and execute it to start basic benchmarking shit.

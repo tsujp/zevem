@@ -1,22 +1,21 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-// TODO: Options to build zevem as either a library for consumption versus its own standalone "tooling" mode which is the same but would have a slower interface by nature of not being embedded into a host program. Still unsure if normal b.addLibrary and so forth cover this or are "blanket" approaches. See addInstallArtifact which could be of use there.
 // TODO: Add git commit hash and project semver into package version when compiled.
 // TODO: builtin.output_mode approach could be useful, something to look at when zevem is much further along. https://ziglang.org/documentation/0.14.0/std/#builtin.output_mode -- ghostty also takes that approach.
-// TODO: Ghostty build approach is rather complex, MIGHT be good inspiration if warranted in the future.
-// TODO: "zevem" as a named import for tests to use instead of "../../zevem.zig"?
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // const enable_tracy = b.option(bool, "tracy", "Enable Tracy profiling") orelse false;
-    const want_binary = b.option(bool, "with-binary", "Also build zevem binary") orelse true;
+    const want_tracy = b.option(bool, "tracy", "Enable Tracy profiling") orelse false;
+    const want_binary = b.option(bool, "with-cli", "Build zevem cli") orelse true;
+
+    // TODO: Add warning text if tracy is enabled that notes the performance impact (for people who might accidentally be doing so).
 
     // TODO: I think createModule is correct here, addModule does the same but also adds the module to this package's module set so our dependents can access it but AFAIU that would be for dependencies _this_ package has that we want to allow our dependents (consumers) to also have access to (e.g. for config or whatever).
     const lib_mod = b.createModule(.{
-        .root_source_file = b.path("src/zevem.zig"),
+        .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -32,19 +31,43 @@ pub fn build(b: *std.Build) !void {
     const run_test_cmd = b.addRunArtifact(lib_test);
     test_step.dependOn(&run_test_cmd.step);
 
+    const tracy = b.dependency("tracy", .{
+        .target = target,
+        .optimize = optimize,
+        .tracy_enable = want_tracy,
+        .tracy_callstack = 10,
+        .tracy_no_exit = false,
+    });
+
+    lib_mod.addImport("tracy", tracy.module("tracy"));
+
+    if (want_tracy) {
+        // lib_mod.addImport("tracy", tracy.module("tracy"));
+        lib_mod.linkLibrary(tracy.artifact("tracy"));
+    }
+
     if (want_binary) {
         const exe_mod = b.createModule(.{
-            .root_source_file = b.path("src/cli.zig"),
+            .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
         });
+
+        exe_mod.addImport("zevem", lib_mod);
 
         const exe = b.addExecutable(.{
             .name = "zevem",
             .root_module = exe_mod,
         });
 
-        // Generate zevem cli binary.
+        exe_mod.addImport("tracy", tracy.module("tracy"));
+
+        if (want_tracy) {
+            // exe_mod.addImport("tracy", tracy.module("tracy"));
+            exe_mod.linkLibrary(tracy.artifact("tracy"));
+            // exe.linkLibCpp();
+        }
+
         b.installArtifact(exe);
     }
 }

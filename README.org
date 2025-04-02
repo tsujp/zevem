@@ -24,15 +24,19 @@ To build:
 
 #+begin_src sh
 just build
+# zig build
 #+end_src
 
 To run all tests:
 
 #+begin_src sh
 just test
+# zig build test
 #+end_src
 
 The justfile is configured (by default) to echo the commands it executes; it's syntax is very readable however and is mostly a convenient alias for various Zig build-system commands.
+
+Both just commands above accept zero or more additional parameters which are passed directly to the Zig build-system. Further build options (e.g. tracing, building the zevem cli) are at the top of [[./build.zig][build.zig]].
 
 *** Developer Environments / Tooling
 
@@ -53,3 +57,11 @@ To create and run the built container image, replacing any that may exist:
 #+end_src
 
 This repo's files are bind-mounted into the container at =/home/jammy/project= so no work is lost when deleting/re-building/re-creating (etc) the container so long as you stick within that bind-mounted directory.
+
+*** Tracing
+
+Tracy is integrated and available by passing ~-Dtracy=true~ to ~just build~ or ~just test~. If you alter Tracy versions do note that Tracy does *not* guarantee compatibility between *any* versions (even semver patch releases), thus exact matching versions must be used. Tracy provides tools to update older trace versions to newer ones amongst a lot more described in their [[https://github.com/wolfpld/tracy][PDF manual which can be found at the Tracy repo]].
+
+To get you started though: the instrumented application (i.e. zevem) is called the "client", and the Tracy profiler the "server". Instrumented clients gather and send trace information to the server at runtime over a network connection (local or wide, enabling remote profiling). Finally Tracy provides a GUI to explore trace information. The GUI also has an embedded server so it can receive trace information directly if preferred.
+
+The easiest way to get started is to compile zevem with tracing, execute the Tracy capture utility ~capture~, and then execute the zevem artifacts upon which a trace will be captured.

@@ -7,12 +7,13 @@
     // XXX: If you fork zevem you should delete this field and re-run `zig build` to get a new suggested fingerprint value.
     .fingerprint = 0x24d9ea76eb8beba, // Changing this has security and trust implications.
 
-    // .dependencies = .{
-    //     .tracy = "zig-tracy",
-    // },
-    .dependencies = .{},
+    .dependencies = .{
+        .tracy = .{
+            .url = "git+https://github.com/FalsePattern/zig-tracy#59d83635ffb44210a76e8b81e67812ad14d49305",
+            .hash = "tracy-0.0.4-OH_jZFenAACxUqZw7xWR6V3BuASTEYmYZt5yij8HN_hS",
+        },
+    },
 
-    // Only those relevant for zevem as a package.
     .paths = .{
         "build.zig",
         "build.zig.zon",

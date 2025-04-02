@@ -4,6 +4,8 @@ const OpCode = @import("opcode.zig").OpCode;
 const builtin = @import("builtin");
 const native_endian = builtin.cpu.arch.endian();
 
+const tracy = @import("tracy");
+
 const MAX_STACK_DEPTH = 1024;
 
 const WORD = u256;
@@ -72,6 +74,9 @@ pub fn New(comptime Environment: type) type {
             var gpa: std.heap.DebugAllocator(.{}) = .init;
             const allocator = gpa.allocator();
 
+            // var tracing_alloc = tracy.TracingAllocator.init(std.heap.page_allocator);
+            // const allocator = tracing_alloc.allocator();
+
             return Self{
                 .alloc = allocator,
                 .pc = 0,
@@ -106,10 +111,18 @@ pub fn New(comptime Environment: type) type {
         }
 
         pub fn execute(self: *Self, rom: []const u8) !void {
+            const zone = tracy.initZone(@src(), .{ .name = "EVM execute" });
+            defer zone.deinit();
+
             print("{s:=^60}\n", .{" EVM execute "});
             // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
             _ = sw: switch (decodeOp(rom[self.pc])) {
                 .STOP => |op| {
+                    const zone_stop = tracy.initZone(@src(), .{ .name = "OP: STOP" });
+                    defer zone_stop.deinit();
+
+                    tracy.message("STOP executed");
+
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
 
@@ -659,8 +672,8 @@ pub fn New(comptime Environment: type) type {
                         @memcpy(self.return_data[0..], self.mem.items[@truncate(offset)..end]);
                     }
 
-                    // if (op == .REVERT) return error.Revert;
-                    if (op == .REVERT) return EvmError.Revert;
+                    if (op == .REVERT) return error.Revert;
+                    // if (op == .REVERT) return EvmError.Revert;
 
                     return;
                 },
