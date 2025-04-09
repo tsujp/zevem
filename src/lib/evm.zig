@@ -1,9 +1,13 @@
 const std = @import("std");
 const print = std.debug.print;
-const OpCode = @import("opcode.zig").OpCode;
+
+const OpCode = @import("opcode.zig").OpCodes.Enum;
+const op_table = @import("opcode.zig").OpCodes.table;
+
 const builtin = @import("builtin");
 const native_endian = builtin.cpu.arch.endian();
 
+// TODO: FalsePattern's zig-tracy no-ops its functions if we don't enable it, but also check our own usage is no-op'd when not in-use.
 const tracy = @import("tracy");
 
 const MAX_STACK_DEPTH = 1024;
@@ -46,6 +50,32 @@ pub const EvmError = error{
     Revert,
 };
 
+// TODO: Output test binary so I can run poop on that.
+// TODO: Also for that the container needs access to perf events which it currently does not. Maybe it will need to be built in the container but it can be executed on the VM.
+// TODO: Are tag value lookups for enums constant time?
+
+fn traceZone(comptime src: std.builtin.SourceLocation, comptime op: anytype) tracy.ZoneContext {
+    // XXX: Would expect compiler to always inline this function, if not and we need to add `inline`.
+    const op_reified = switch (@typeInfo(@TypeOf(op))) {
+        .pointer => |ptr| blk: {
+            // String literals are constant single-item Pointers to null-terminated byte arrays. The type of string literals encodes both the length, and the fact that they are null-terminated.
+            if (!(ptr.size == .one and ptr.is_const and ptr.alignment == 1 and ptr.sentinel_ptr == null)) {
+                @compileError("Expected a string literal but got " ++ @typeInfo(@TypeOf(op)));
+            }
+
+            break :blk op;
+        },
+        .@"enum" => blk: {
+            std.debug.assert(@TypeOf(op) == OpCode);
+
+            break :blk @tagName(op);
+        },
+        else => @compileError("Expected string literal or OpCode but got " ++ @TypeOf(op)),
+    };
+
+    return tracy.initZone(src, .{ .name = op_reified });
+}
+
 pub fn New(comptime Environment: type) type {
     return struct {
         const Self = @This();
@@ -68,17 +98,12 @@ pub fn New(comptime Environment: type) type {
 
         return_data: []u8,
 
-        // TODO: Specialised allocators later on, perhaps external allocators passed in from host (where we're potentially embedded).
-        // pub fn init(alloc: std.mem.Allocator) !Self {
+        // TODO: Define an Options struct and take that instead. Perhaps even see if we can get the decl literal .default or .init pattern here. I don't know how that would work with needing to use an allocator though since if we create it in this function it will be invalid once function scope ends. Maybe see if llvm/Builder.zig uses do any of that: https://github.com/ziglang/zig/blob/0.14.0/lib/std/zig/llvm/Builder.zig#L8512
         pub fn init(alloc: std.mem.Allocator, env: *Environment) !Self {
-            // var gpa: std.heap.DebugAllocator(.{}) = .init;
-            // const allocator = gpa.allocator();
-
             // var tracing_alloc = tracy.TracingAllocator.init(std.heap.page_allocator);
             // const allocator = tracing_alloc.allocator();
 
             return Self{
-                // .alloc = allocator,
                 .alloc = alloc,
                 .pc = 0,
                 .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
@@ -89,10 +114,28 @@ pub fn New(comptime Environment: type) type {
         }
 
         // TODO: Actually is better as inline?
-        inline fn decodeOp(raw_bytecode: u8) OpCode {
+        fn decodeOp(raw_bytecode: u8) OpCode {
             // If we do want to check for further bytecode then we can probably keep using labelled switch and instead would need to store the bytecode on the vm struct, take the ip as a paramete rhere, check we're within bounds and then return as we currently do.
+            // TODO: Assert the amount of expected stack variables are present.
+            // const dacode: OpCode = @as(OpCode, @enumFromInt(raw_bytecode));
+            // const foo_zone = tracy.initZone(@src(), .{ .name = @tagName(@as(OpCode, @enumFromInt(raw_bytecode)))});
+            // const foo_zone = tracy.initZone(@src(), .{});
+            // foo_zone.name(@tagName(dacode));
+            // // foo_zone.text("bingbong");
+            // defer foo_zone.deinit();
+            // @compileLog(@TypeOf(opTable));
+            // const info = opTable[raw_bytecode];
+            // std.debug.print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {any} {any} {any}\n", .{ info.fee, info.delta, info.alpha });
+
             return @as(OpCode, @enumFromInt(raw_bytecode));
         }
+
+        // fn nextOp(self: *Self, raw_bytecode: u8) OpCode {
+        //     const zt = zoneTrace(@src(), "nextOp");
+        //     defer zt.deinit();
+        //     defer self.pc += 1;
+        //     return @as(OpCode, @enumFromInt(raw_bytecode));
+        // }
 
         // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
 
@@ -599,6 +642,10 @@ pub fn New(comptime Environment: type) type {
                 // zig fmt: on
                 => |op| {
                     traceOp(op, self.pc, .cntln);
+                    const zt = traceZone(@src(), "PUSH");
+                    zt.text(@tagName(op));
+                    defer zt.deinit();
+
                     self.pc += 1;
 
                     // Offset vs PUSH0 is amount of bytes to read forward and push onto stack as
