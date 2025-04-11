@@ -539,11 +539,30 @@ test "basic POP" {
     // try expect(c == error.Pop);
 }
 
+// TODO: Put elsewhere, fine here (for now).
+fn printMemory(mem: std.ArrayListUnmanaged(u8)) void {
+    const print = std.debug.print;
+
+    var it = std.mem.window(u8, mem.items, 32, 32);
+    while (it.next()) |word| {
+        const addr = (it.index orelse mem.items.len) - it.size;
+        print("{x:0>6}:{d:<3}  ", .{ addr, addr });
+
+        for (word, 0..) |byte, i| {
+            print(" {x:0>2}", .{byte});
+            if (@mod(i, 8) == 7) print(" ", .{});
+        }
+
+        print("\n", .{});
+    }
+}
+
 test "basic MSTORE" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process.
     const vm1 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff5200");
     try expect(vm1.stack.len == 0);
     std.debug.print("vm.mem.items = {any}\n", .{vm1.mem.items.len});
+    printMemory(vm1.mem);
     try expect(vm1.mem.items.len == 255 + 32);
     for (0..0xff) |i| {
         try expect(vm1.mem.items[i] == 0);
@@ -566,6 +585,7 @@ test "basic MSTORE" {
     const overwrites = try basicBytecode("7fabcdef00000000000000abba000000000deaf000000c0de001000000001337005f5260015f5200");
     try expect(overwrites.stack.len == 0);
     try expect(overwrites.mem.items.len == 32);
+    printMemory(overwrites.mem);
     try expect(std.mem.readInt(u256, overwrites.mem.items[0..32], .big) == 1);
 }
 
