@@ -11,6 +11,8 @@ pub fn build(b: *std.Build) !void {
     const want_tracy = b.option(bool, "tracy", "Enable Tracy profiling") orelse false;
     const want_binary = b.option(bool, "with-cli", "Build zevem cli") orelse true;
 
+    const test_filters = b.option([]const []const u8, "test-filter", "Skip tests which do not match any of the specified test filters") orelse &.{};
+
     // TODO: Add warning text if tracy is enabled that notes the performance impact (for people who might accidentally be doing so).
 
     // TODO: I think createModule is correct here, addModule does the same but also adds the module to this package's module set so our dependents can access it but AFAIU that would be for dependencies _this_ package has that we want to allow our dependents (consumers) to also have access to (e.g. for config or whatever).
@@ -22,6 +24,12 @@ pub fn build(b: *std.Build) !void {
 
     const lib_test = b.addTest(.{
         .root_module = lib_mod,
+        .filters = test_filters,
+
+        // TEMP: Custom test runner hacking.
+        // .test_runner = .{ .path = b.path("src/test_runner.zig"), .mode = .simple },
+        // .test_runner = .{ .path = b.path("src/test_runner_2.zig"), .mode = .simple },
+        // .test_runner = .{ .path = b.path("src/test_runner_3.zig"), .mode = .simple },
     });
 
     // Add lib_mod to itself (lib_mod) as an importable module called "zevem" so that in test files we can simply `@import("zevem")` instead of having to `@import("../../zevem.zig");` which would depend on the location of the test file in-question.
