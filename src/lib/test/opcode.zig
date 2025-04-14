@@ -617,6 +617,8 @@ test "basic DUP" {
     var d03_a = try basicBytecode("600c600a5f8200");
     try expectEqual(d03_a.stack.pop(), 0xc);
 
+    // TODO: Generate the rest of these tests via a build-time script (or seperate shell script).
+
     // DUP4
     // DUP5
     // DUP6
@@ -630,6 +632,12 @@ test "basic DUP" {
     // DUP14
     // DUP15
     // DUP16
+}
+
+test "basic SWAP" {
+    try expectEqual(true, true);
+
+    // TODO
 }
 
 test "basic RETURN" {

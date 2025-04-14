@@ -68,14 +68,14 @@ const FeeSchedule = enum {
     TODO_CUSTOM_FEE,
 };
 
-// Largest actual delta or alpha appears to be 7, so 3 bits.
+// TODO: Largest actual delta or alpha appears to be 7, so 3 bits, but using 5 to keep things more literal for now (i.e. SWAP and DUP large delta/alpha in yellowpaper).
 const OpInfo = struct {
     // TODO: There are opcodes which have complex gas calculation functions so we should allow either a FeeSchedule or a pointer to a function that implements the gas cost computation as a value here.
     fee: GasCost,
     // Delta: stack items to be removed.
-    delta: u3,
+    delta: u5,
     // Alpha: stack items to be added.
-    alpha: u3,
+    alpha: u5,
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -85,7 +85,11 @@ const OpInfo = struct {
 // TODO: In progress adding gas cost and stack deltas (delete this when done)
 //       --  0s:  complete
 //       -- 10s:
+//       -- PUSH: complete
+//       -- SWAP: complete
+//       -- DUP: complete
 
+// TODO: Why do DUP and SWAP have an asterisk next to them on page 29 yellowpaper for their gas cost? There is no qualifying asterisk that I can find... or is it the convention of * for intermediate value (in which case this makes no sense). I guess we'll find out when tests assert gas spent and we either pass or fail.
 const OpCodes = MakeOpCodes(.{
     // XXX: Deciding capitalisation is unintuitive (CallData vs Calldata and so on) so capitalise all.
 
@@ -205,13 +209,13 @@ const OpCodes = MakeOpCodes(.{
     // /////// 80s: Duplication Operations
 
     // DUP1 ... DUP16
-    .{ .DUP, .{ 0x80, 0x8F }, .zero, 0, 0 }, // Duplicate Nth stack item (TODO: To the top of the stack?)
+    .{ .DUP, .{ 0x80, 0x8F }, .verylow, incrFrom(1), incrFrom(2) }, // Duplicate Nth stack item (TODO: To the top of the stack?)
 
     // //////////////////////////////////////////
     // /////// 90s: Exchange Operations
 
     // SWAP1 ... SWAP16
-    .{ .SWAP, .{ 0x90, 0x9F }, .zero, 0, 0 }, // Swap N and N+1th stack items.
+    .{ .SWAP, .{ 0x90, 0x9F }, .verylow, incrFrom(2), incrFrom(2) },
 
     // //////////////////////////////////////////
     // /////// a0s: Logging Operations
@@ -248,8 +252,31 @@ fn makeEnumField(comptime name: [:0]const u8, comptime value: OPCODE_SIZE) EnumF
     return .{ .name = name, .value = value };
 }
 
-fn makeOpInfo(comptime args: anytype) OpInfo {
-    return .{ .fee = .{ .constant = args[2] }, .delta = args[3], .alpha = args[4] };
+fn makeOpInfo(comptime args: anytype, comptime override: ?struct { ?comptime_int, ?comptime_int }) OpInfo {
+    // Due to the way I pass values to override we effectively need two checks here (which is being done). This can be cleaned up later when the comptime interface likely gets a rewrite after zevem works.
+    const d_final, const a_final = blk: {
+        const o = override orelse break :blk .{ args[3], args[4] };
+
+        break :blk .{
+            o[0] orelse args[3],
+            o[1] orelse args[4],
+        };
+    };
+
+    return .{
+        .fee = .{ .constant = args[2] },
+        .delta = d_final,
+        .alpha = a_final,
+    };
+}
+
+// XXX: Could easily argue using a function here over tuple value like .{ .from = 2 } is silly but it gives us quick discrimination (just check if the type is a function).
+fn incrFrom(comptime start_at: comptime_int) fn (comptime_int) comptime_int {
+    return struct {
+        pub fn call(comptime ordinal_offset: comptime_int) comptime_int {
+            return start_at + ordinal_offset;
+        }
+    }.call;
 }
 
 fn MakeOpCodes(comptime args: anytype) struct { Enum: type, table: [MAX_OPCODE_COUNT]OpInfo } {
@@ -280,14 +307,14 @@ fn MakeOpCodes(comptime args: anytype) struct { Enum: type, table: [MAX_OPCODE_C
                 0 => blk: {
                     const v = enum_fields[enum_fields.len - 1].value + 1;
 
-                    op_table[v] = makeOpInfo(df);
+                    op_table[v] = makeOpInfo(df, null);
                     break :blk makeEnumField(name_str, v);
                 },
                 // Explicit ordinal, set as given.
                 1 => blk: {
                     const v = ord_def[0];
 
-                    op_table[v] = makeOpInfo(df);
+                    op_table[v] = makeOpInfo(df, null);
                     break :blk makeEnumField(name_str, v);
                 },
                 // Explicit ordinal inclusive range, iterate and set.
@@ -298,9 +325,17 @@ fn MakeOpCodes(comptime args: anytype) struct { Enum: type, table: [MAX_OPCODE_C
                     comptime var iter: [to - from]EnumField = undefined;
 
                     for (from..to) |ord| {
-                        op_table[ord] = makeOpInfo(df);
+                        const offset = ord - from + 1;
+
+                        op_table[ord] = makeOpInfo(df, .{
+                            if (@typeInfo(@TypeOf(df[3])) == .@"fn") df[3](offset - 1) else null,
+                            if (@typeInfo(@TypeOf(df[4])) == .@"fn") df[4](offset - 1) else null,
+                        });
+
+                        // @compileLog("OPINFO:", name_str, op_table[ord]);
+
                         iter[ord - from] = makeEnumField(
-                            std.fmt.comptimePrint("{s}{d}", .{ name_str, ord - from + 1 }),
+                            std.fmt.comptimePrint("{s}{d}", .{ name_str, offset }),
                             ord,
                         );
                     }
