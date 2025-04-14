@@ -1,31 +1,77 @@
+//! Opcode definitions and compile-time creation.
+
 const std = @import("std");
 const print = std.debug.print;
 const EnumField = std.builtin.Type.EnumField;
 const comptimePrint = std.fmt.comptimePrint;
 
+// XXX: Can't seem to access as struct members if using top-level fields in op.zig so consume from op.zig `pub const ...` instead.
+pub const Enum = OpCodes.Enum;
+pub const table = OpCodes.table;
+
 // XXX: Arguably overengineered versus just hardcoding u8 and 256.
 const OPCODE_SIZE = u8;
 const MAX_OPCODE_COUNT: comptime_int = std.math.maxInt(OPCODE_SIZE) + 1;
 
-// TODO: Reduce size u8 is too big, but maybe entirely different data structure idk.
-// TODO: The rest of the fee schedule amounts (from appendix G of yellowpaper).
-const FeeSchedule = enum(u8) {
-    zero = 0,
-    jumpdest = 1,
-    base = 2,
-    verylow = 3,
-    low = 5,
-    mid = 8,
-    high = 10,
+const GasCost = struct {
+    constant: FeeSchedule,
+    // TODO: Dynamic.
+};
 
-    // TODO: Hack for now until function pointers to gas calculation, or an enum value to represent that idk.
-    TODO_CUSTOM_FEE = 255,
+// Instructions can have constant gas prices associated with them and/or dynamic gas prices associated with them.
+// Instructions which alter memory size pay gas according to the magnitude of memory modified.
+// 9.2 Fees Overview: three distinct circumstances, all prerequisite to instruction execution.
+// 1. Fee intrinsic to operation (appendix G).
+// 2. Fee for subordinate message call or contract creation (CREATE, CREATE2, CALL, CALLCODE).
+// 3. Increase in usage of memory.
+// Total fee for memory usage payable is proportional to smallest multiple of 32 bytes required such that all memory indices (read or write) are included in that range. Paid just-in-time. So, accessing area of memory at least 32 bytes greater than any previously indexed memory will result in increased fee.
+
+// TODO: Map this to the scalar values of appendix G.
+const FeeSchedule = enum {
+    zero,
+    jumpdest,
+    base,
+    verylow,
+    low,
+    mid,
+    high,
+    warmaccess,
+    accesslistaddress,
+    accessliststorage,
+    coldaccountaccess,
+    coldsload,
+    sset,
+    sreset,
+    sclear,
+    selfdestruct,
+    create,
+    codedeposit,
+    initcodeword,
+    callvalue,
+    callstipend,
+    newaccount,
+    exp,
+    expbyte,
+    memory,
+    txcreate,
+    txdatazero,
+    txdatanonzero,
+    transaction,
+    log,
+    logdata,
+    logtopic,
+    keccak256,
+    keccak256word,
+    copy,
+    blockhash,
+    // TODO: Remove this field later.
+    TODO_CUSTOM_FEE,
 };
 
 // Largest actual delta or alpha appears to be 7, so 3 bits.
 const OpInfo = struct {
     // TODO: There are opcodes which have complex gas calculation functions so we should allow either a FeeSchedule or a pointer to a function that implements the gas cost computation as a value here.
-    fee: FeeSchedule,
+    fee: GasCost,
     // Delta: stack items to be removed.
     delta: u3,
     // Alpha: stack items to be added.
@@ -40,7 +86,7 @@ const OpInfo = struct {
 //       --  0s:  complete
 //       -- 10s:
 
-pub const OpCodes = MakeOpCodes(.{
+const OpCodes = MakeOpCodes(.{
     // XXX: Deciding capitalisation is unintuitive (CallData vs Calldata and so on) so capitalise all.
 
     // //////////////////////////////////////////
@@ -203,7 +249,7 @@ fn makeEnumField(comptime name: [:0]const u8, comptime value: OPCODE_SIZE) EnumF
 }
 
 fn makeOpInfo(comptime args: anytype) OpInfo {
-    return .{ .fee = args[2], .delta = args[3], .alpha = args[4] };
+    return .{ .fee = .{ .constant = args[2] }, .delta = args[3], .alpha = args[4] };
 }
 
 fn MakeOpCodes(comptime args: anytype) struct { Enum: type, table: [MAX_OPCODE_COUNT]OpInfo } {

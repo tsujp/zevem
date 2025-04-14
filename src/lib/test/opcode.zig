@@ -1,3 +1,6 @@
+//! Dedicated to opcode testing to keep source file clean.
+// There are A LOT of tests, if this is heresy we can simply paste this contents into said source file.
+
 const std = @import("std");
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;

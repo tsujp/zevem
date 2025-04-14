@@ -1,14 +1,13 @@
 const std = @import("std");
 const print = std.debug.print;
-
-const OpCode = @import("opcode.zig").OpCodes.Enum;
-const op_table = @import("opcode.zig").OpCodes.table;
-
 const builtin = @import("builtin");
 const native_endian = builtin.cpu.arch.endian();
 
 // TODO: FalsePattern's zig-tracy no-ops its functions if we don't enable it, but also check our own usage is no-op'd when not in-use.
 const tracy = @import("tracy");
+
+const OpCode = @import("op.zig").Enum;
+const op_table = @import("op.zig").table;
 
 const MAX_STACK_DEPTH = 1024;
 
@@ -127,15 +126,19 @@ pub fn New(comptime Environment: type) type {
             // const info = opTable[raw_bytecode];
             // std.debug.print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {any} {any} {any}\n", .{ info.fee, info.delta, info.alpha });
 
+            // op_table[raw_bytecode].fee.dynamic();
+
             return @as(OpCode, @enumFromInt(raw_bytecode));
         }
 
-        // fn nextOp(self: *Self, raw_bytecode: u8) OpCode {
-        //     const zt = zoneTrace(@src(), "nextOp");
-        //     defer zt.deinit();
-        //     defer self.pc += 1;
-        //     return @as(OpCode, @enumFromInt(raw_bytecode));
-        // }
+        fn nextOp(self: *Self, raw_bytecode: u8) OpCode {
+            // XXX: Validating the stack items here (might) be inefficient as not every opcode requires it (i.e. profile the actual impact) however it is simpler which is better for now (getting zevem working in the first place).
+            // XXX: Also if validating stack items here the use of BoundedArray from stdlib is executing potentially useless assertions on presence of items (i.e. .pop() etc) which we could do without if this approach is favoured (i.e. after profiling).
+            // const zt = zoneTrace(@src(), "nextOp");
+            // defer zt.deinit();
+            defer self.pc += 1;
+            return @as(OpCode, @enumFromInt(raw_bytecode));
+        }
 
         // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
 
@@ -733,4 +736,8 @@ pub fn New(comptime Environment: type) type {
             };
         }
     };
+}
+
+test "blah" {
+    try std.testing.expect(true == true);
 }
