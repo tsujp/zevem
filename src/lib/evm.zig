@@ -592,6 +592,10 @@ pub fn New(comptime Environment: type) type {
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
                 },
                 // TODO: ORIGIN to BLOBBASEFEE
+                .BLOBBASEFEE => {
+                    // TODO: gas pricing and opcode notes from eip-7516
+                    return error.NotImplemented;
+                },
                 .POP => |op| {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
@@ -602,6 +606,7 @@ pub fn New(comptime Environment: type) type {
                 },
                 .MLOAD => {
                     // TODO
+                    return error.NotImplemented;
                 },
                 .MSTORE => |op| {
                     traceOp(op, self.pc, .endln);
@@ -629,6 +634,19 @@ pub fn New(comptime Environment: type) type {
                     std.mem.writeInt(u256, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), value, .big);
 
                     continue :sw decodeOp(rom[self.pc]);
+                },
+                .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS, .JUMPDEST => {
+                    // TODO: Implement.
+                    // TODO: Dynamic gas pricing.
+                    return error.NotImplemented;
+                },
+                .TLOAD, .TSTORE => {
+                    // TODO: gas pricing and notes on the spec of these two from eip-1153
+                    return error.NotImplemented;
+                },
+                .MCOPY => {
+                    // TODO: gas pricing and notes from eip-5656
+                    return error.NotImplemented;
                 },
                 // TODO: MSTORE8 to MCOPY
                 .PUSH0 => |op| {
@@ -704,7 +722,7 @@ pub fn New(comptime Environment: type) type {
                 // zig fmt: on
                 => {
                     // TODO: Implement.
-                    // TODO: Custom gas.
+                    // TODO: Custom gas (do this one first I reckon, it's fairly simple).
                     return error.NotImplemented;
                 },
                 // TODO: These are only grouped while un-implemented, split into own prongs as required when implementing.

@@ -83,8 +83,8 @@ const OpInfo = struct {
 
 // TODO: Double check the grouping of opcodes here.
 // TODO: In progress adding gas cost and stack deltas (delete this when done)
-//       COMPLETE: 0s, 10s, 20s, PUSH, DUP, SWAP, f0s
-//       TODO: 30s, 40s, 50s, a0s
+//       COMPLETE: 0s, 10s, 20s, 50s, PUSH, DUP, SWAP, f0s, a0s
+//       TODO: 30s, 40s, 50s
 
 // TODO: Why do DUP and SWAP have an asterisk next to them on page 29 yellowpaper for their gas cost? There is no qualifying asterisk that I can find... or is it the convention of * for intermediate value (in which case this makes no sense). I guess we'll find out when tests assert gas spent and we either pass or fail.
 const OpCodes = MakeOpCodes(.{
@@ -173,28 +173,28 @@ const OpCodes = MakeOpCodes(.{
     .{ .SELFBALANCE, .{}, .zero, 0, 0 }, // Get balance of currently executing account.
     .{ .BASEFEE, .{}, .zero, 0, 0 }, // Get base fee.
     .{ .BLOBHASH, .{}, .zero, 0, 0 }, // Get versioned hashes.
-    .{ .BLOBBASEFEE, .{}, .zero, 0, 0 }, // Get block's blob base-fee.
+    .{ .BLOBBASEFEE, .{}, .TODO_CUSTOM_FEE, 0, 1 }, // Get block's blob base-fee.
 
     // UNUSED: 0x4B ... 0x4F
 
     // //////////////////////////////////////////
     // /////// 50s: Stack, Memory, Storage and Flow Operations
 
-    .{ .POP, .{0x50}, .zero, 0, 0 },
-    .{ .MLOAD, .{}, .zero, 0, 0 },
-    .{ .MSTORE, .{}, .zero, 0, 0 },
-    .{ .MSTORE8, .{}, .zero, 0, 0 },
-    .{ .SLOAD, .{}, .zero, 0, 0 },
-    .{ .SSTORE, .{}, .zero, 0, 0 },
-    .{ .JUMP, .{}, .zero, 0, 0 },
-    .{ .JUMPI, .{}, .zero, 0, 0 },
-    .{ .PC, .{}, .zero, 0, 0 },
-    .{ .MSIZE, .{}, .zero, 0, 0 },
-    .{ .GAS, .{}, .zero, 0, 0 },
-    .{ .JUMPDEST, .{}, .zero, 0, 0 },
-    .{ .TLOAD, .{}, .zero, 0, 0 },
-    .{ .TSTORE, .{}, .zero, 0, 0 },
-    .{ .MCOPY, .{}, .zero, 0, 0 }, // Copy memory areas.
+    .{ .POP, .{0x50}, .base, 1, 0 },
+    .{ .MLOAD, .{}, .TODO_CUSTOM_FEE, 1, 1 },
+    .{ .MSTORE, .{}, .TODO_CUSTOM_FEE, 2, 0 },
+    .{ .MSTORE8, .{}, .TODO_CUSTOM_FEE, 2, 0 },
+    .{ .SLOAD, .{}, .TODO_CUSTOM_FEE, 1, 1 },
+    .{ .SSTORE, .{}, .TODO_CUSTOM_FEE, 2, 0 },
+    .{ .JUMP, .{}, .mid, 1, 0 },
+    .{ .JUMPI, .{}, .high, 2, 0 },
+    .{ .PC, .{}, .base, 0, 1 },
+    .{ .MSIZE, .{}, .base, 0, 1 },
+    .{ .GAS, .{}, .base, 0, 1 },
+    .{ .JUMPDEST, .{}, .jumpdest, 0, 0 },
+    .{ .TLOAD, .{}, .TODO_CUSTOM_FEE, 1, 1 },
+    .{ .TSTORE, .{}, .TODO_CUSTOM_FEE, 2, 0 },
+    .{ .MCOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy memory areas.
 
     // //////////////////////////////////////////
     // /////// 5f, 60s & 70s: Push Operations
