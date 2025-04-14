@@ -583,6 +583,7 @@ pub fn New(comptime Environment: type) type {
                 },
                 .ADDRESS => {
                     // TODO
+                    return error.NotImplemented;
                 },
                 .BALANCE => |op| {
                     traceOp(op, self.pc, .endln);
@@ -590,6 +591,11 @@ pub fn New(comptime Environment: type) type {
 
                     // in-place replace the content of the balance
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
+                },
+                // TODO: Spit as appropriate when implementing.
+                .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
+                    // TODO: Implement.
+                    return error.NotImplemented;
                 },
                 // TODO: Spit as appropriate when implementing.
                 .BLOCKHASH, .COINBASE, .TIMESTAMP, .NUMBER, .PREVRANDAO, .GASLIMIT, .CHAINID, .SELFBALANCE, .BASEFEE => {
@@ -773,9 +779,9 @@ pub fn New(comptime Environment: type) type {
                 },
                 // TEMPORARY.
                 // TODO: Do we want catch unreachable here (in which case make OpCode enum non-exhaustive) or do we want a prong to prevent runtime crashes and log the unhandled opcode. I guess the latter.
-                else => {
-                    return error.UnknownType;
-                },
+                // else => {
+                //     return error.UnknownType;
+                // },
             };
         }
     };

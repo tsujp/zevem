@@ -81,11 +81,6 @@ const OpInfo = struct {
 // /////////////////////////////////////////////////////////////////////////////
 // //////////////// Comptime opcode definitions
 
-// TODO: Double check the grouping of opcodes here.
-// TODO: In progress adding gas cost and stack deltas (delete this when done)
-//       COMPLETE: 0s, 10s, 20s, 50s, PUSH, DUP, SWAP, f0s, a0s
-//       TODO: 30s, 40s
-
 // TODO: Why do DUP and SWAP have an asterisk next to them on page 29 yellowpaper for their gas cost? There is no qualifying asterisk that I can find... or is it the convention of * for intermediate value (in which case this makes no sense). I guess we'll find out when tests assert gas spent and we either pass or fail.
 const OpCodes = MakeOpCodes(.{
     // XXX: Deciding capitalisation is unintuitive (CallData vs Calldata and so on) so capitalise all.
@@ -144,22 +139,22 @@ const OpCodes = MakeOpCodes(.{
     // /////// 30s: Environmental Information
 
     // Environment / get information.
-    .{ .ADDRESS, .{0x30}, .zero, 0, 0 }, // Get address of currently executing account.
-    .{ .BALANCE, .{}, .zero, 0, 0 }, // Get balance of account.
-    .{ .ORIGIN, .{}, .zero, 0, 0 }, // Get execution of origination address.
-    .{ .CALLER, .{}, .zero, 0, 0 }, // Get caller address.
-    .{ .CALLVALUE, .{}, .zero, 0, 0 }, // Get deposited value via instruction/transaction responsible for current execution.
-    .{ .CALLDATALOAD, .{}, .zero, 0, 0 }, // Get input data of current environment.
-    .{ .CALLDATASIZE, .{}, .zero, 0, 0 }, // Get size of input data in current environment.
-    .{ .CALLDATACOPY, .{}, .zero, 0, 0 }, // Copy input data in current environment to memory.
-    .{ .CODESIZE, .{}, .zero, 0, 0 }, // Get size of code running in current environment.
-    .{ .CODECOPY, .{}, .zero, 0, 0 }, // Copy code running in current environment to memory.
-    .{ .GASPRICE, .{}, .zero, 0, 0 }, // Get gas price in current environment.
-    .{ .EXTCODESIZE, .{}, .zero, 0, 0 }, // Get size of given account's code.
-    .{ .EXTCODECOPY, .{}, .zero, 0, 0 }, // Copy given account's code to memory.
-    .{ .RETURNDATASIZE, .{}, .zero, 0, 0 }, // Get size of output data from previous call in current environment.
-    .{ .RETURNDATACOPY, .{}, .zero, 0, 0 }, // Copy output data from previous call to memory.
-    .{ .EXTCODEHASH, .{}, .zero, 0, 0 }, // Get hash of given account's code.
+    .{ .ADDRESS, .{0x30}, .base, 0, 1 }, // Get address of currently executing account.
+    .{ .BALANCE, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get balance of account.
+    .{ .ORIGIN, .{}, .base, 0, 1 }, // Get execution of origination address.
+    .{ .CALLER, .{}, .base, 0, 1 }, // Get caller address.
+    .{ .CALLVALUE, .{}, .base, 0, 1 }, // Get deposited value via instruction/transaction responsible for current execution.
+    .{ .CALLDATALOAD, .{}, .verylow, 1, 1 }, // Get input data of current environment.
+    .{ .CALLDATASIZE, .{}, .base, 0, 1 }, // Get size of input data in current environment.
+    .{ .CALLDATACOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy input data in current environment to memory.
+    .{ .CODESIZE, .{}, .base, 0, 1 }, // Get size of code running in current environment.
+    .{ .CODECOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy code running in current environment to memory.
+    .{ .GASPRICE, .{}, .base, 0, 1 }, // Get gas price in current environment.
+    .{ .EXTCODESIZE, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get size of given account's code.
+    .{ .EXTCODECOPY, .{}, .TODO_CUSTOM_FEE, 4, 0 }, // Copy given account's code to memory.
+    .{ .RETURNDATASIZE, .{}, .base, 0, 1 }, // Get size of output data from previous call in current environment.
+    .{ .RETURNDATACOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy output data from previous call to memory.
+    .{ .EXTCODEHASH, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get hash of given account's code.
 
     // //////////////////////////////////////////
     // /////// 40s: Block Information
