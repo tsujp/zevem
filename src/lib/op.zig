@@ -84,7 +84,7 @@ const OpInfo = struct {
 // TODO: Double check the grouping of opcodes here.
 // TODO: In progress adding gas cost and stack deltas (delete this when done)
 //       COMPLETE: 0s, 10s, 20s, 50s, PUSH, DUP, SWAP, f0s, a0s
-//       TODO: 30s, 40s, 50s
+//       TODO: 30s, 40s
 
 // TODO: Why do DUP and SWAP have an asterisk next to them on page 29 yellowpaper for their gas cost? There is no qualifying asterisk that I can find... or is it the convention of * for intermediate value (in which case this makes no sense). I guess we'll find out when tests assert gas spent and we either pass or fail.
 const OpCodes = MakeOpCodes(.{
@@ -163,16 +163,16 @@ const OpCodes = MakeOpCodes(.{
 
     // //////////////////////////////////////////
     // /////// 40s: Block Information
-    .{ .BLOCKHASH, .{}, .zero, 0, 0 }, // Get hash of given complete block (within last 256).
-    .{ .COINBASE, .{}, .zero, 0, 0 }, // Get block's beneficiary address.
-    .{ .TIMESTAMP, .{}, .zero, 0, 0 }, // Get block's timestamp.
-    .{ .NUMBER, .{}, .zero, 0, 0 }, // Get block's ordinal number.
-    .{ .PREVRANDAO, .{}, .zero, 0, 0 }, // Get block's difficulty.
-    .{ .GASLIMIT, .{}, .zero, 0, 0 }, // Get block's gas limit.
-    .{ .CHAINID, .{}, .zero, 0, 0 }, // Get chain id.
-    .{ .SELFBALANCE, .{}, .zero, 0, 0 }, // Get balance of currently executing account.
-    .{ .BASEFEE, .{}, .zero, 0, 0 }, // Get base fee.
-    .{ .BLOBHASH, .{}, .zero, 0, 0 }, // Get versioned hashes.
+    .{ .BLOCKHASH, .{}, .blockhash, 1, 1 }, // Get hash of given complete block (within last 256).
+    .{ .COINBASE, .{}, .base, 0, 1 }, // Get block's beneficiary address.
+    .{ .TIMESTAMP, .{}, .base, 0, 1 }, // Get block's timestamp.
+    .{ .NUMBER, .{}, .base, 0, 1 }, // Get block's ordinal number.
+    .{ .PREVRANDAO, .{}, .base, 0, 1 }, // Get block's difficulty.
+    .{ .GASLIMIT, .{}, .base, 0, 1 }, // Get block's gas limit.
+    .{ .CHAINID, .{}, .base, 0, 1 }, // Get chain id.
+    .{ .SELFBALANCE, .{}, .low, 0, 1 }, // Get balance of currently executing account.
+    .{ .BASEFEE, .{}, .base, 0, 1 }, // Get base fee.
+    .{ .BLOBHASH, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get versioned hashes.
     .{ .BLOBBASEFEE, .{}, .TODO_CUSTOM_FEE, 0, 1 }, // Get block's blob base-fee.
 
     // UNUSED: 0x4B ... 0x4F

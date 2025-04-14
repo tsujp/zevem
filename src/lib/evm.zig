@@ -591,7 +591,15 @@ pub fn New(comptime Environment: type) type {
                     // in-place replace the content of the balance
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
                 },
-                // TODO: ORIGIN to BLOBBASEFEE
+                // TODO: Spit as appropriate when implementing.
+                .BLOCKHASH, .COINBASE, .TIMESTAMP, .NUMBER, .PREVRANDAO, .GASLIMIT, .CHAINID, .SELFBALANCE, .BASEFEE => {
+                    // TODO: Implement.
+                    return error.NotImplemented;
+                },
+                .BLOBHASH => {
+                    // TODO: gas pricing and opcode notes from eip-4844
+                    return error.NotImplemented;
+                },
                 .BLOBBASEFEE => {
                     // TODO: gas pricing and opcode notes from eip-7516
                     return error.NotImplemented;
@@ -635,6 +643,7 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw decodeOp(rom[self.pc]);
                 },
+                // TODO: Spit as appropriate when implementing.
                 .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS, .JUMPDEST => {
                     // TODO: Implement.
                     // TODO: Dynamic gas pricing.
