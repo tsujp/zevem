@@ -699,14 +699,13 @@ pub fn New(comptime Environment: type) type {
                 => {
                     // TODO
                 },
-                .LOG0 => {
-                    // TODO
-                },
                 // zig fmt: off
-                inline .LOG1, .LOG2, .LOG3, .LOG4,
+                inline .LOG0, .LOG1, .LOG2, .LOG3, .LOG4,
                 // zig fmt: on
                 => {
-                    // TODO
+                    // TODO: Implement.
+                    // TODO: Custom gas.
+                    return error.NotImplemented;
                 },
                 // TODO: These are only grouped while un-implemented, split into own prongs as required when implementing.
                 .CREATE, .CALL, .CALLCODE, .DELEGATECALL, .CREATE2, .STATICCALL => {

@@ -218,9 +218,9 @@ const OpCodes = MakeOpCodes(.{
     // /////// a0s: Logging Operations
 
     // TOOD: LOG have different price values and stack deltas, enumerate manually.
-    .{ .LOG0, .{}, .zero, 0, 0 }, // Append log record with 0 topics.
+    .{ .LOG0, .{}, .TODO_CUSTOM_FEE, 2, 0 }, // Append log record with 0 topics.
     // LOG1 ... LOG4
-    .{ .LOG, .{ 0xA1, 0xA4 }, .zero, 0, 0 }, // Append log record with N topics.
+    .{ .LOG, .{ 0xA1, 0xA4 }, .TODO_CUSTOM_FEE, incrFrom(3), 0 }, // Append log record with N topics.
 
     // UNUSED: 0xA5 ... 0xEF
 
