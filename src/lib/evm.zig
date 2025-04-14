@@ -554,6 +554,8 @@ pub fn New(comptime Environment: type) type {
                     traceOp(op, self.pc, .endln);
                     self.pc += 1;
 
+                    // TODO: llvm has an intrinsic for this I believe, use theirs instead? Could be an optimisation for later but then would tie us to llvm.
+
                     // s[0] = bits to shift by ; s[1] = value to be shifted
                     // s[1] and result pushed to stack are treated as signed; s[0] is unsigned.
 
@@ -706,9 +708,15 @@ pub fn New(comptime Environment: type) type {
                 => {
                     // TODO
                 },
-                // TODO: CREATE onwards
+                // TODO: These are only grouped while un-implemented, split into own prongs as required when implementing.
+                .CREATE, .CALL, .CALLCODE, .DELEGATECALL, .CREATE2, .STATICCALL => {
+                    // TODO: Implement.
+                    // TODO: Custom gas.
+                    return error.NotImplemented;
+                },
                 .RETURN, .REVERT => |op| {
                     traceOp(op, self.pc, .endln);
+                    // TODO: Dynamic gas for these opcodes.
 
                     // s[0] = memory offset to read from ; s[1] = bytes to read
 
@@ -727,6 +735,15 @@ pub fn New(comptime Environment: type) type {
                     // if (op == .REVERT) return EvmError.Revert;
 
                     return;
+                },
+                .INVALID => {
+                    // TODO: Implement (but what, double check do we just do nothing or is this an error.. it is called "invalid").
+                    return error.NotImplemented;
+                },
+                .SELFDESTRUCT => {
+                    // TODO: Implement.
+                    // TODO: Has dynamic gas see appendix G and its opcode definition H.2
+                    return error.NotImplemented;
                 },
                 // TEMPORARY.
                 // TODO: Do we want catch unreachable here (in which case make OpCode enum non-exhaustive) or do we want a prong to prevent runtime crashes and log the unhandled opcode. I guess the latter.

@@ -83,11 +83,8 @@ const OpInfo = struct {
 
 // TODO: Double check the grouping of opcodes here.
 // TODO: In progress adding gas cost and stack deltas (delete this when done)
-//       --  0s:  complete
-//       -- 10s:
-//       -- PUSH: complete
-//       -- SWAP: complete
-//       -- DUP: complete
+//       COMPLETE: 0s, 10s, 20s, PUSH, DUP, SWAP, f0s
+//       TODO: 30s, 40s, 50s, a0s
 
 // TODO: Why do DUP and SWAP have an asterisk next to them on page 29 yellowpaper for their gas cost? There is no qualifying asterisk that I can find... or is it the convention of * for intermediate value (in which case this makes no sense). I guess we'll find out when tests assert gas spent and we either pass or fail.
 const OpCodes = MakeOpCodes(.{
@@ -117,29 +114,29 @@ const OpCodes = MakeOpCodes(.{
     // /////// 10s: Comparison & Bitwise Logic Operations
 
     // Comparison.
-    .{ .LT, .{0x10}, .zero, 0, 0 }, // Less than.
-    .{ .GT, .{}, .zero, 0, 0 }, // Greater than.
-    .{ .SLT, .{}, .zero, 0, 0 }, // Signed less than.
-    .{ .SGT, .{}, .zero, 0, 0 }, // Signed greater than.
-    .{ .EQ, .{}, .zero, 0, 0 }, // Equality.
-    .{ .ISZERO, .{}, .zero, 0, 0 }, // Is zero.
+    .{ .LT, .{0x10}, .verylow, 2, 1 }, // Less than.
+    .{ .GT, .{}, .verylow, 2, 1 }, // Greater than.
+    .{ .SLT, .{}, .verylow, 2, 1 }, // Signed less than.
+    .{ .SGT, .{}, .verylow, 2, 1 }, // Signed greater than.
+    .{ .EQ, .{}, .verylow, 2, 1 }, // Equality.
+    .{ .ISZERO, .{}, .verylow, 1, 1 }, // Is zero.
     //
     // Bitwise.
-    .{ .AND, .{}, .zero, 0, 0 }, // AND.
-    .{ .OR, .{}, .zero, 0, 0 }, // OR.
-    .{ .XOR, .{}, .zero, 0, 0 }, // XOR.
-    .{ .NOT, .{}, .zero, 0, 0 }, // NOT.
+    .{ .AND, .{}, .verylow, 2, 1 }, // AND.
+    .{ .OR, .{}, .verylow, 2, 1 }, // OR.
+    .{ .XOR, .{}, .verylow, 2, 1 }, // XOR.
+    .{ .NOT, .{}, .verylow, 1, 1 }, // NOT.
     //
-    .{ .BYTE, .{}, .zero, 0, 0 }, // Retrieve single byte from word.
-    .{ .SHL, .{}, .zero, 0, 0 }, // Left-shift (TODO: What kind, bitwise?)
-    .{ .SHR, .{}, .zero, 0, 0 }, // Logical right-shift.
-    .{ .SAR, .{}, .zero, 0, 0 }, // Arithmetic signed right-shift.
+    .{ .BYTE, .{}, .verylow, 2, 1 }, // Retrieve single byte from word.
+    .{ .SHL, .{}, .verylow, 2, 1 }, // Left-shift (TODO: What kind, bitwise?)
+    .{ .SHR, .{}, .verylow, 2, 1 }, // Logical right-shift.
+    .{ .SAR, .{}, .verylow, 2, 1 }, // Arithmetic signed right-shift.
 
     // UNUSED: 0x1E ... 0x1F
 
     // //////////////////////////////////////////
     // /////// 20s: KECCAK256
-    .{ .KECCAK256, .{0x20}, .zero, 0, 0 }, // Compute KECCAK-256 hash.
+    .{ .KECCAK256, .{0x20}, .TODO_CUSTOM_FEE, 2, 1 }, // Compute KECCAK-256 hash.
 
     // UNUSED: 0x21 ... 0x2F
 
@@ -215,7 +212,7 @@ const OpCodes = MakeOpCodes(.{
     // /////// 90s: Exchange Operations
 
     // SWAP1 ... SWAP16
-    .{ .SWAP, .{ 0x90, 0x9F }, .verylow, incrFrom(2), incrFrom(2) },
+    .{ .SWAP, .{ 0x90, 0x9F }, .verylow, incrFrom(2), incrFrom(2) }, // Swap N and N+1th stack items.
 
     // //////////////////////////////////////////
     // /////// a0s: Logging Operations
@@ -229,20 +226,18 @@ const OpCodes = MakeOpCodes(.{
 
     // //////////////////////////////////////////
     // /////// f0s: System operations
-    .{ .CREATE, .{0xF0}, .zero, 0, 0 }, // Create new account with given code.
-    .{ .CALL, .{}, .zero, 0, 0 }, // Message-call into given account.
-    .{ .CALLCODE, .{}, .zero, 0, 0 }, // Message-call into account with alternative account's code.
-    .{ .RETURN, .{}, .zero, 0, 0 }, // Halt, return output data.
-    .{ .DELEGATECALL, .{}, .zero, 0, 0 }, //
-    .{ .CREATE2, .{}, .zero, 0, 0 }, // Create new account with given code at predictable address.
-
+    .{ .CREATE, .{0xF0}, .TODO_CUSTOM_FEE, 3, 1 }, // Create new account with given code.
+    .{ .CALL, .{}, .TODO_CUSTOM_FEE, 7, 1 }, // Message-call into given account.
+    .{ .CALLCODE, .{}, .TODO_CUSTOM_FEE, 7, 1 }, // Message-call into account with alternative account's code.
+    .{ .RETURN, .{}, .zero, 2, 0 }, // Halt, return output data.
+    .{ .DELEGATECALL, .{}, .TODO_CUSTOM_FEE, 6, 1 }, //
+    .{ .CREATE2, .{}, .TODO_CUSTOM_FEE, 4, 1 }, // Create new account with given code at predictable address.
     // UNUSED: 0xF6 ... 0xF9
-    .{ .STATICCALL, .{0xFA}, .zero, 0, 0 }, // Static message call into account.
-
+    .{ .STATICCALL, .{0xFA}, .TODO_CUSTOM_FEE, 6, 1 }, // Static message call into account.
     // UNUSED: 0xFB ... 0xFC
-    .{ .REVERT, .{0xFD}, .zero, 0, 0 }, // Halt, revert state changes but still return data and remaining gas.
+    .{ .REVERT, .{0xFD}, .zero, 2, 0 }, // Halt, revert state changes but still return data and remaining gas.
     .{ .INVALID, .{}, .zero, 0, 0 }, // Well-known invalid instruction.
-    .{ .SELFDESTRUCT, .{}, .zero, 0, 0 }, // Halt execution and register account for later deletion OR send all Ether to address (cancun).
+    .{ .SELFDESTRUCT, .{}, .selfdestruct, 1, 0 }, // Halt execution and register account for later deletion OR send all Ether to address (cancun).
 });
 
 // /////////////////////////////////////////////////////////////////////////////
