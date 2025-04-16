@@ -4,6 +4,7 @@
 const std = @import("std");
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
+const expectError = std.testing.expectError;
 
 const zevem = @import("zevem");
 const util = zevem.util;
@@ -665,4 +666,14 @@ test "basic REVERT" {
     for (evm.return_data) |i| {
         try expect(i == 0xff);
     }
+}
+
+test "nonsense" {
+    // TODO: Way to have all of this on one return type for nicer testing.
+    var dummyEnv: DummyEnv = .{};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = gpa.allocator();
+    var evm = try EVM.init(allocator, &dummyEnv);
+    const err = evm.execute(&util.htb("0c"));
+    try expectError(error.InvalidOpCode, err);
 }
