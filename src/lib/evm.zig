@@ -125,6 +125,8 @@ pub fn New(comptime Environment: type) type {
             // Attempt to access beyond the end of bytecode is a STOP (op 0x00) per spec.
             const raw_bytecode = if (self.pc >= rom.len) return OpCode.STOP else rom[self.pc];
 
+            defer self.pc += 1;
+
             const opcode = std.meta.intToEnum(OpCode, raw_bytecode) catch return error.InvalidOpCode;
             const opinfo = op_table[raw_bytecode];
 
@@ -178,7 +180,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .ADD => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // TODO: Here and for other similar log with traceStackTake
 
@@ -189,7 +190,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .MUL => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     try self.stack.append(self.stack.pop().? *% self.stack.pop().?);
 
@@ -197,7 +197,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SUB => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     try self.stack.append(self.stack.pop().? -% self.stack.pop().?);
 
@@ -205,7 +204,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .DIV => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = numerator ; s[1] = denominator.
                     const numerator = self.stack.pop().?;
@@ -218,7 +216,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SDIV => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = numerator ; s[1] = denominator.
                     // Both values treated as 2's complement signed 256-bit integers.
@@ -238,7 +235,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .MOD => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = numerator ; s[1] = denominator.
                     const numerator = self.stack.pop().?;
@@ -251,7 +247,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SMOD => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = numerator ; s[1] = denominator.
                     // Both values treated as 2's complement signed 256-bit integers.
@@ -264,7 +259,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .ADDMOD => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0, 1] = addition operands ; s[2] = denominator.
                     // TODO: Definitely a nicer way of implementing this outside of u257 and an intCast; optimise for that later.
@@ -285,7 +279,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .MULMOD => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0, 1] = addition operands ; s[2] = denominator.
                     // TODO: Ditto on modulo optimisation.
@@ -305,7 +298,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .EXP => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // XXX: Alternative left-to-right binary exponentiation uses one less u512 but requires more bit-twiddling. Consider alternatives / optimise later on.
 
@@ -335,7 +327,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SIGNEXTEND => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = byte size of target value minus one ; s[1] = value
 
@@ -373,7 +364,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .LT => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] < s[1]
 
@@ -383,7 +373,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .GT => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] > s[1]
 
@@ -393,7 +382,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SLT => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] < s[1]
 
@@ -408,7 +396,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SGT => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] > s[1]
 
@@ -423,7 +410,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .EQ => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] == s[1]
 
@@ -433,7 +419,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .ISZERO => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] == 0
 
@@ -443,7 +428,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .AND => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // Bitwise: s[0] AND s[1]
 
@@ -454,7 +438,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .OR => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // Bitwise: s[0] OR s[1]
 
@@ -464,7 +447,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .XOR => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // Bitwise: s[0] XOR s[1]
 
@@ -474,7 +456,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .NOT => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // Bitwise: NOT s[0]
 
@@ -484,7 +465,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .BYTE => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = byte offset to take from ; s[1] = word value to be sliced
 
@@ -513,7 +493,6 @@ pub fn New(comptime Environment: type) type {
                 // XXX: For SHL, SHR, SAR: which is faster doing these bitwise shifts or equivalent arithmetic (floor division etc). Optimisation. Need to benchmark the assembly from these and compare it to the "naive" way of doing them (just divisions etc) since LLVM _probably_ does a better job..?
                 .SHL => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = bits to shift by ; s[1] = value to be shifted
 
@@ -533,7 +512,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SHR => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = bits to shift by ; s[1] = value to be shifted
 
@@ -552,7 +530,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .SAR => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // TODO: llvm has an intrinsic for this I believe, use theirs instead? Could be an optimisation for later but then would tie us to llvm.
 
@@ -587,7 +564,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .BALANCE => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // in-place replace the content of the balance
                     self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
@@ -612,7 +588,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .POP => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     _ = self.stack.pop().?;
 
@@ -624,7 +599,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 .MSTORE => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // s[0] = memory offset to write from ; s[1] = value to write
 
@@ -666,7 +640,6 @@ pub fn New(comptime Environment: type) type {
                 // TODO: MSTORE8 to MCOPY
                 .PUSH0 => |op| {
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     try self.stack.append(0);
 
@@ -683,8 +656,6 @@ pub fn New(comptime Environment: type) type {
                     const zt = traceZone(@src(), "PUSH");
                     zt.text(@tagName(op));
                     defer zt.deinit();
-
-                    self.pc += 1;
 
                     // Offset vs PUSH0 is amount of bytes to read forward and push onto stack as
                     // this instructions operand.
@@ -716,7 +687,6 @@ pub fn New(comptime Environment: type) type {
                 => |op| {
                     // TODO: EVM yellowpaper lists very large added/deleted stack items for these, e.g. DUP10 deletes 10 stack items and adds 11. Is that _literally_ happening though, because it doesn't look like it or really make sense if it is.
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
 
                     // Offset vs DUP1 is index from top of stack + 1 to duplicate.
                     const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.DUP1);

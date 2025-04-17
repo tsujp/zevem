@@ -21,11 +21,11 @@ const DummyEnv = @import("../DummyEnv.zig");
 test "basic ADD" {
     // Two plus two is faw!
     var a = try basicBytecode("600260020100");
-    try expect(a.stack.pop() == 4);
+    try expectEqual(a.stack.pop(), 4);
 
     // (2^256 - 1) + (2^256 - 1) = (2^256 - 2)
     var b = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0100");
-    try expect(b.stack.pop() == 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
+    try expectEqual(b.stack.pop(), 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe);
 }
 
 test "basic MUL" {
@@ -715,7 +715,7 @@ test "out of bounds bytecode STOP" {
     try expectEqual(evm.stack.len, 2); // Stack length unchanged.
     const stk = [_]u256{1} ** 2;
     try std.testing.expectEqualSlices(u256, &stk, evm.stack.constSlice()); // Stack contents unchanged.
-    // try expectEqual(420, evm.pc); // TODO: What does spec say, is pc +1 for the implicit STOP? So, 420 or 421 here?
+    try expectEqual(420, evm.pc); // TODO: What does spec say, is pc +1 for the implicit STOP? So, 420 or 421 here?
 
     // Essentially the same test except a happy case with implicit termination, we add 1 and 2 and do not finish our bytecode with 0x00 (STOP). The top of the stack should still be 3 and there should not be any error.
     var impl = try basicBytecode("6001600201");
