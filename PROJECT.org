@@ -1,5 +1,383 @@
 #+TITLE: zevem project information
 
+* Zevem
+
+** Yellowpaper Notes
+
+*** Conventions
+
+- Double-stroked N :: scalars are non-negative integers.
+- Double-stroked B :: set of all byte sequences.
+
+If N is subscripted (e.g. N_256) it is the set of all non-negative integers smaller than 2^256.
+If B is subscripted (e.g. B_32) it is the set of all byte sequences of length 32.
+
+Square brackets index into, and/or reference individual components or subsequences.
+
+Two adjacent dots (yellowpaper mistakenly calls ellipsis) denote inclusive range.
+
+Modified and utilisable value of a thing is denoted prime ′ and intermediate values superscript one or two asterisks.
+
+Empty sequence denoted () and empty set ∅ and these are not equal to each other.
+
+*** Structure
+
+**** World State
+:PROPERTIES:
+:YPNotation: σ -- bold-face sigma
+:END:
+
+Maps addresses (160-bit identifiers) and account states (RLP serialised data). Not stored on-chain, usually maintained in a modified Merkle Patricia tree (herein: trie) held by some database ("state database").
+*************** TODO Any of the formulas on page 4 which are relevant for just-the-EVM implementation.
+*************** END
+
+***** Account State
+:PROPERTIES:
+:YPNotation: σ[a] -- bold-face sigma, indexed by a
+:END:
+
+Accounts have four fields. Accounts are empty if they have no code, zero nonce, and zero balance (f.14).
+
+****** Nonce
+:PROPERTIES:
+:YPNotation: σ[a]_n -- bold-face sigma, indexed by a, subscripted by n
+:END:
+
+Scalar number of transactions sent from address. If account has associated code, number of contract-creations made by account.
+
+****** Balance
+:PROPERTIES:
+:YPNotation: σ[a]_b -- bold-face sigma, indexed by a, subscripted by b
+:END:
+
+Scalar amount of Wei owned by address.
+
+****** Storage-root
+:PROPERTIES:
+:YPNotation: σ[a]_s -- bold-face sigma, indexed by a, subscripted by s
+:END:
+
+256-bit hash for root node of trie that encodes the storage contents for account. Stylised: *storageRoot*.
+*************** TODO More detailed storageRoot notes
+Yellowpaper pg 4 left-side.
+*************** END
+
+****** Code-hash
+:PROPERTIES:
+:YPNotation: σ[a]_c -- bold-face sigma, indexed by a, subscripted by c
+:END:
+
+Hash of EVM code associated with account. Such code will be executed when a message call is received. Code is stored keyed by their Keccak-256 hash. Subscript c refers to the code-hash, stylised: *codeHash*.
+
+Bold b refers to the concrete code. Thus KEC(b) = σ[a]_c.
+
+If codeHash is hash of empty string (i.e. σ[a]_c = KEC(())) then the node is a simple account, aka "non-contract" account.
+*************** TODO What is "node" here??
+bottom of page 4 in yp
+*************** END
+
+**** Machine State
+:PROPERTIES:
+:YPNotation: μ -- bold-face mu
+:END:
+
+*************** TODO Machine state notes
+*************** END
+
+**** Transaction
+:PROPERTIES:
+:YPNotation: T -- italic capital t
+:END:
+
+Single cryptographically-signed instruction. Sender cannot be a contract. EIP-2718 introduces different transaction types (via a transaction envelope).
+
+- 0 :: legacy
+- 1 :: EIP-2930
+- 2 :: EIP-1559
+
+Transactions can create new accounts with associated code (informally "contract creation"), or result in message calls.
+
+***** Common Transaction Fields
+
+All transactions have common fields:
+
+****** type
+:PROPERTIES:
+:YPNotation: T_x -- italic capital t, subscript x
+:END:
+
+EIP-2718 transaction type.
+
+****** none
+:PROPERTIES:
+:YPNotation: T_n -- italic capital t, subscript n
+:END:
+
+Scalar number of transactions sent by sender.
+
+****** gasLimit
+:PROPERTIES:
+:YPNotation: T_g -- italic capital t, subscript g
+:END:
+
+Scalar maximum amount of gas which /could/ be used in executing this transaction. Paid up-front before any computation. Immutable during transaction.
+
+****** to
+:PROPERTIES:
+:YPNotation: T_t -- italic capital t, subscript t
+:END:
+
+160-bit address of the message call's recipient. If contract creation then ∅ which here represents B_0 (set of all byte sequences of length zero).
+
+****** value
+:PROPERTIES:
+:YPNotation: T_v -- italic capital t, subscript v
+:END:
+
+Scalar amount of Wei to transfer to message call's recipient. If contract creation then an endowment to newly created account.
+
+****** r
+:PROPERTIES:
+:YPNotation: T_r -- italic capital t, subscript r
+:END:
+
+Signature of transaction.
+*************** TODO And for s, see Appendix F of yp for these definitions
+see also bottom left of page 5 of yp
+*************** END
+
+****** s
+:PROPERTIES:
+:YPNotation: T_s -- italic capital t, subscript s
+:END:
+
+Sender of transaction.
+
+***** Legacy Transaction Fields
+
+****** w
+:PROPERTIES:
+:YPNotation: T_w -- italic capital t, subscript w
+:END:
+
+Scalar encoding of Y parity, and possibly chain ID. This is essentially the chainId and yParity fields but for legacy transactions. See EIP-155.
+
+***** EIP-2930, EIP-1559 Transaction Fields
+
+****** accessList
+:PROPERTIES:
+:YPNotation: T_A -- italic capital t, subscript bold-face capital a
+:END:
+
+List of access entries to warm up.
+*************** TODO What does that mean? Plus notes on the tuple information there.
+*************** END
+
+****** chainId
+:PROPERTIES:
+:YPNotation: T_c -- italic capital t, subscript c
+:END:
+
+Chain ID, must be equal to network chain ID denoted β.
+
+****** yParity
+:PROPERTIES:
+:YPNotation: T_y -- italic capital t, subscript y
+:END:
+
+Signature Y parity.
+*************** TODO What?
+yp pg5 left side.
+*************** END
+
+***** Gas Pricing
+
+Type 2 transactions specify gas pricing differently to type 0 and type 1.
+
+****** Legacy, EIP-2910 Gas Pricing
+
+Single field.
+
+******* gasPrice
+:PROPERTIES:
+:YPNotation: T_p -- italic capital t, subscript p
+:END:
+
+Scalar maximum amount of Wei payable per unit of gas for all computation costs relating to execution of this transaction.
+
+****** EIP-1559 Gas Pricing
+
+Two fields related to gas intended to explicitly limit priority fee magnitude.
+
+******* maxFeePerGas
+:PROPERTIES:
+:YPNotation: T_m -- italic capital t, subscript m
+:END:
+
+Scalar maximum amount of Wei payable per unit of gas for all computation costs relating to execution of this transaction.
+
+******* maxPriorityFeePerGas
+:PROPERTIES:
+:YPNotation: T_f -- italic capital t, subscript f
+:END:
+
+Scalar maximum amount of Wei payable to block's fee recipient as an incentive to include the transaction.
+
+***** Contract Creation Fields
+
+Regardless of transaction type, a contract creation transaction has the field:
+
+****** init
+:PROPERTIES:
+:YPNotation: T_i -- italic capital t, subscript i
+:END:
+
+Unlimited size byte array of EVM bytecode for account initialisation procedure. Specifically, init is a code-fragment which returns a /body/ (a second fragment of code); the /body/ is executed each time the account receives a message call (whether from a transaction, or internal execution).
+
+So, init is only executed once (at contract creation) and is discarded immediately thereafter.
+
+***** Message Call Fields
+
+For all transaction types which are message calls, there will be the field:
+
+****** data
+:PROPERTIES:
+:YPNotation: T_d -- italic capital t, subscript d
+:END:
+
+Unlimited size byte array specifying input data of the message call.
+
+**** Gas and Payment
+
+Fee schedule (Appendix G). The gasLimit T_g of a transaction is implicitly purchased from the sender's account balance at the effective gas price before any computation is performed. At the end of the transaction any unused gas is refunded (at the same rate of purchase) to the sender's account.
+
+If this implicit purchase can not be made (not enough account balance) then the transaction is invalid.
+*************** TODO effective gas price section 6
+*************** END
+*************** TODO gas does not exist outside of the execution of a transaction
+i get that but what does the following (bottom-right pg8) then mean: Thus for accounts with trusted
+code associated, a relatively high gas limit may be set and
+left alone.
+*************** END
+
+Since EIP-1559 every transaction must pay a /base fee/ which is specified in Wei per unit of gas consumed and is immutable during each transaction in a given block. The Wei paid to meet the base fee is burned.
+
+The base fee adjusts dynamically based on the previous block's gas consumption relative to it's /gas target/. The gas target is adjustable by validators.
+
+If the previous block's total gas consumption exceeds it's gas target (i.e. high demand) the base fee is increased, and vice versa.
+*************** TODO section 4.4 outlines how the base fee is set in detail
+*************** END
+
+To incentivise validators to include transactions a /priority fee/, also specified in Wei per unit of gas consumed, is payable. The total fee for a transaction is the sum of the base fee and priority fee then multiplied by the total gas consumed. The priority fee is paid to a /beneficiary/ address.
+
+EIP-1559 transaction fields *maxPriorityFeePerGas* (maximum priority fee willing to pay), and *maxFeePerGas* (max total fee willing to pay, inclusive of priority and base fee). *maxFeePerGas* must be at least as high as the base fee to be included in a block. *maxPriorityFeePerGas* must not exceed *maxFeePerGas*.
+
+Legacy, and EIP-2930 transaction field *gasPrice* (which also must be at least as high as the base fee for block inclusion) supplements base and priority fees (with less control). The extent to which *gasPrice* exceeds the base fee represents the implicit priority fee.
+
+**** Transaction Execution
+*************** TODO Notes
+*************** END
+
+*** Cancun EVM
+
+TLOAD, TSTORE: https://eips.ethereum.org/EIPS/eip-1153
+Same stack arguments as SLOAD and SSTORE.
+
+MCOPY: https://eips.ethereum.org/EIPS/eip-5656
+
+BLOBHASH: https://eips.ethereum.org/EIPS/eip-4844
+
+BLOBBASEFEE: https://eips.ethereum.org/EIPS/eip-7516
+
+*** Gas
+
+Opcodes can have associated constant and/or dynamic gas prices and (with rare exceptions) are checked /prior/ to opcode execution.
+
+*************** TODO such exceptions are?
+*************** END
+
+Appendix G defines tuples of constant gas fees and associated operations. Appendix H.1 concretely defines the gas cost function which covers all EVM instructions however further investigation per-opcode via Appendix H.2 (the EVM instruction set) is required to finally determine all associated gas fees for an opcode.
+
+Section 9.2 outlines three circumstances where gas is payable:
+
+1. Intrinsic cost (usually constant, Appendices G, H.1).
+2. Subordinate message calls or contract creation (CREATE, CREATE2, CALL, CALLCODE).
+3. Increase in usage of memory.
+
+Opcodes which alter memory size pay gas according to the magnitude of memory modified in proportion to the smallest multiple of 32-bytes (i.e. WORD) required such that all indices (whether read or write) are included in said range. Essentially, any access to an area of memory 32-bytes greater than any previously indexed memory will incur a gas cost.
+
+** Datastructures
+
+*** Opcodes, Gas cost, Stack deltas
+
+An enum of opcodes tagged with a u8 provides constant time lookup, but how to associate gas cost and stack deltas without going crazy on the size of the datastructure.
+
+Is a multiarraylist but keyed by an enum an option?
+
+* Zig
+
+** Datastructures
+
+*** Enums
+
+**** EnumMap
+
+A map keyed by an enum, backed by a bitfield and a dense array. If the enum is exhaustive but not dense, a mapping will be constructed from enum values to dense indices. This type does no dynamic allocation and can be copied by value.
+
+**** EnumArray
+
+An array keyed by an enum, backed by a dense array. If the enum is not dense, a mapping will be constructed from enum values to dense indices. This type does no dynamic allocation and can be copied by value.
+
+**** EnumMultiset
+
+A multiset of enum elements up to a count of usize. Backed by an EnumArray. This type does no dynamic allocation and can be copied by value.
+
+**** EnumSet
+
+A set of enum elements, backed by a bitfield. If the enum is exhaustive but not dense, a mapping will be constructed from enum values to dense indices. This type does no dynamic allocation and can be copied by value.
+
+**** BoundedEnumMultiset
+
+A multiset of enum elements up to CountSize. Backed by an EnumArray. This type does no dynamic allocation and can be copied by value.
+
+* Tracing
+
+** Zone Naming and Statistics
+
+Calling Tracy as follows:
+
+#+begin_src zig
+fn someFunction() {
+    const zone = tracy.initZone(@src(), .{ .name = "foobar" });
+}
+#+end_src
+
+Will compute statistics for a zone named ~foobar~ as expected. If calling Tracy like this however:
+
+#+begin_src zig
+fn someFunction() {
+    const zone = tracy.initZone(@src(), .{});
+    zone.name("foobar");
+}
+#+end_src
+
+Then the zone will be doubly-named as ~someFunction~ (from its enclosing scope) and ~foobar~ however statistics will only be computed under the ~someFunction~ name. This isn't important in this simple example but imagine now a parameter is given to set the zone name:
+
+#+begin_src zig
+fn someFunction(name: []const u8) {
+    const zone = tracy.initZone(@src(), .{});
+    zone.name(name);
+}
+#+end_src
+
+This will result in zones named as expected but no statistics will be computed for each ~name~, they will all be under (statistically) the ~someFunction~ moniker. This can be beneficial in some scenarios, if statistics per ~name~ are desired Tracy must be called as:
+
+#+begin_src zig
+fn someFunction(name: []const u8) {
+   const zone = tracy.initZone(@src(), .{ .name = name });
+}
+#+end_src
+
 * Building
 
 ** Zig Build Modes
@@ -172,6 +550,10 @@ Maybe (if things like tracy or valgrind for whatever reason aren't good enough, 
 :PROPERTIES:
 :visibility: outline
 :END:
+
+** TODO Any of that snapshot testing for everyone from tigerbeetle appropriate for our opcode unit tests later on?
+
+See: https://tigerbeetle.com/blog/2024-05-14-snapshot-testing-for-the-masses/
 
 ** TODO Add custom EvmError errors and use those instead
 
