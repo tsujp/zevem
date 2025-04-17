@@ -112,27 +112,7 @@ pub fn New(comptime Environment: type) type {
             };
         }
 
-        // TODO: Actually is better as inline?
-        fn decodeOp(raw_bytecode: u8) !OpCode {
-            // If we do want to check for further bytecode then we can probably keep using labelled switch and instead would need to store the bytecode on the vm struct, take the ip as a paramete rhere, check we're within bounds and then return as we currently do.
-            // TODO: Assert the amount of expected stack variables are present.
-            // const dacode: OpCode = @as(OpCode, @enumFromInt(raw_bytecode));
-            // const foo_zone = tracy.initZone(@src(), .{ .name = @tagName(@as(OpCode, @enumFromInt(raw_bytecode)))});
-            // const foo_zone = tracy.initZone(@src(), .{});
-            // foo_zone.name(@tagName(dacode));
-            // // foo_zone.text("bingbong");
-            // defer foo_zone.deinit();
-            // @compileLog(@TypeOf(opTable));
-            // const info = opTable[raw_bytecode];
-            // std.debug.print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {any} {any} {any}\n", .{ info.fee, info.delta, info.alpha });
-
-            // op_table[raw_bytecode].fee.dynamic();
-
-            const opcode = std.meta.intToEnum(OpCode, raw_bytecode) catch return error.InvalidOpCode;
-
-            return opcode;
-        }
-
+        // TODO: Explicit inline keyword or let compiler decide?
         fn nextOp(self: *Self, rom: []const u8) !OpCode {
             // XXX: Validating the stack items here (might) be inefficient as not every opcode requires it (i.e. profile the actual impact) however it is simpler which is better for now (getting zevem working in the first place).
             // XXX: Also if validating stack items here the use of BoundedArray from stdlib is executing potentially useless assertions on presence of items (i.e. .pop() etc) which we could do without if this approach is favoured (i.e. after profiling).
@@ -186,13 +166,12 @@ pub fn New(comptime Environment: type) type {
             // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
             _ = sw: switch (try self.nextOp(rom)) {
                 .STOP => |op| {
-                    const zone_stop = tracy.initZone(@src(), .{ .name = "OP: STOP" });
-                    defer zone_stop.deinit();
-
-                    tracy.message("STOP executed");
-
+                    // const zone_stop = tracy.initZone(@src(), .{ .name = "OP: STOP" });
+                    // defer zone_stop.deinit();
+                    // tracy.message("STOP executed");
                     traceOp(op, self.pc, .endln);
-                    self.pc += 1;
+                    // TODO: Why would STOP increment the program counter? Check what the spec requires here, feels like it shouldn't.
+                    // self.pc += 1;
 
                     // TODO: Here and for other halt opcodes return with error union so we can execute appropriate post-halt actions.
                     return;
@@ -214,7 +193,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(self.stack.pop().? *% self.stack.pop().?);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SUB => |op| {
                     traceOp(op, self.pc, .endln);
@@ -222,7 +201,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(self.stack.pop().? -% self.stack.pop().?);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .DIV => |op| {
                     traceOp(op, self.pc, .endln);
@@ -235,7 +214,7 @@ pub fn New(comptime Environment: type) type {
                     // Stack items are unsigned-integers, Zig will do floored division automatically.
                     try self.stack.append(if (denominator == 0) 0 else (numerator / denominator));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SDIV => |op| {
                     traceOp(op, self.pc, .endln);
@@ -248,14 +227,14 @@ pub fn New(comptime Environment: type) type {
 
                     if (denominator == 0) {
                         try self.stack.append(0);
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     // TODO: This can be optimised probably, look into it later. For example, before bit-casting we can perform the equivalent checks for -1 and -2^255 by checking for max u256 (i.e. all bits set, which is -1 in two's complement for i256) and whether only the first bit is set as that's maximum negative.
 
                     try self.stack.append(@bitCast(if (denominator == -1 and numerator == std.math.minInt(i256)) std.math.minInt(i256) else @divTrunc(numerator, denominator)));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .MOD => |op| {
                     traceOp(op, self.pc, .endln);
@@ -268,7 +247,7 @@ pub fn New(comptime Environment: type) type {
                     // Stack items are unsigned-integers, Zig will do floored division automatically.
                     try self.stack.append(if (denominator == 0) 0 else (numerator % denominator));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SMOD => |op| {
                     traceOp(op, self.pc, .endln);
@@ -281,7 +260,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(if (denominator == 0) 0 else @bitCast(@rem(numerator, denominator)));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .ADDMOD => |op| {
                     traceOp(op, self.pc, .endln);
@@ -296,13 +275,13 @@ pub fn New(comptime Environment: type) type {
 
                     if (denominator == 0) {
                         try self.stack.append(0);
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     const result: u256 = @intCast((left + right) % denominator);
                     try self.stack.append(result);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .MULMOD => |op| {
                     traceOp(op, self.pc, .endln);
@@ -316,13 +295,13 @@ pub fn New(comptime Environment: type) type {
 
                     if (denominator == 0) {
                         try self.stack.append(0);
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     const result: u256 = @intCast((left * right) % denominator);
                     try self.stack.append(result);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .EXP => |op| {
                     traceOp(op, self.pc, .endln);
@@ -352,7 +331,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(@as(WORD, @truncate(result)));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SIGNEXTEND => |op| {
                     traceOp(op, self.pc, .endln);
@@ -375,7 +354,7 @@ pub fn New(comptime Environment: type) type {
 
                     // There's no room to extend s[1] so we can do nothing.
                     if (bytes > (BYTES_IN_WORD - 1)) {
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     // TODO: Optimise this as needed.
@@ -385,12 +364,12 @@ pub fn New(comptime Environment: type) type {
                     // Not a negative two's complement number, nothing to do.
                     if (msb != 1) {
                         try self.stack.append(value);
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     try self.stack.append((WORD_MAX << (u8Truncate(bytes) * 8)) | value);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .LT => |op| {
                     traceOp(op, self.pc, .endln);
@@ -400,7 +379,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(@intFromBool(self.stack.pop().? < self.stack.pop().?));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .GT => |op| {
                     traceOp(op, self.pc, .endln);
@@ -410,7 +389,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(@intFromBool(self.stack.pop().? > self.stack.pop().?));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SLT => |op| {
                     traceOp(op, self.pc, .endln);
@@ -425,7 +404,7 @@ pub fn New(comptime Environment: type) type {
                         @as(SIGNED_WORD, @bitCast(self.stack.pop().?))));
                     // zig fmt: on
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SGT => |op| {
                     traceOp(op, self.pc, .endln);
@@ -440,7 +419,7 @@ pub fn New(comptime Environment: type) type {
                         @as(SIGNED_WORD, @bitCast(self.stack.pop().?))));
                     // zig fmt: on
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .EQ => |op| {
                     traceOp(op, self.pc, .endln);
@@ -450,7 +429,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(@intFromBool(self.stack.pop().? == self.stack.pop().?));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .ISZERO => |op| {
                     traceOp(op, self.pc, .endln);
@@ -460,7 +439,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(@intFromBool(self.stack.pop().? == 0));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .AND => |op| {
                     traceOp(op, self.pc, .endln);
@@ -471,7 +450,7 @@ pub fn New(comptime Environment: type) type {
                     // TODO: A bunch of these kinds of patterns can likely be optimised to just popping one element off, and then setting the top stack element. Optimise after BoundedArray is kept or changed.
                     try self.stack.append(self.stack.pop().? & self.stack.pop().?);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .OR => |op| {
                     traceOp(op, self.pc, .endln);
@@ -481,7 +460,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(self.stack.pop().? | self.stack.pop().?);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .XOR => |op| {
                     traceOp(op, self.pc, .endln);
@@ -491,7 +470,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(self.stack.pop().? ^ self.stack.pop().?);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .NOT => |op| {
                     traceOp(op, self.pc, .endln);
@@ -501,7 +480,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(~self.stack.pop().?);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .BYTE => |op| {
                     traceOp(op, self.pc, .endln);
@@ -515,7 +494,7 @@ pub fn New(comptime Environment: type) type {
                     if (offset >= BYTES_IN_WORD) {
                         self.stack.set(self.stack.len - 1, 0);
 
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     // zig fmt: off
@@ -529,7 +508,7 @@ pub fn New(comptime Environment: type) type {
                     );
                     // zig fmt: on
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 // XXX: For SHL, SHR, SAR: which is faster doing these bitwise shifts or equivalent arithmetic (floor division etc). Optimisation. Need to benchmark the assembly from these and compare it to the "naive" way of doing them (just divisions etc) since LLVM _probably_ does a better job..?
                 .SHL => |op| {
@@ -544,13 +523,13 @@ pub fn New(comptime Environment: type) type {
                     if (bits >= @typeInfo(WORD).int.bits) {
                         _ = self.stack.pop().?; // XXX: Ripe for top of stack set.
                         try self.stack.append(0);
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     // TODO: u8 being log2(u256) i.e. log2(WORD) is all the reflection on WORD worth it? Idea being maybe someone could (idk why) change WORD to.. u128 but then it wouldn't be the EVM (unless the spec changed) etc.
                     try self.stack.append(self.stack.pop().? << @as(u8, @truncate(bits)));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SHR => |op| {
                     traceOp(op, self.pc, .endln);
@@ -564,12 +543,12 @@ pub fn New(comptime Environment: type) type {
                     if (bits >= @typeInfo(WORD).int.bits) {
                         _ = self.stack.pop().?;
                         try self.stack.append(0);
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     try self.stack.append(self.stack.pop().? >> @as(u8, @truncate(bits)));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .SAR => |op| {
                     traceOp(op, self.pc, .endln);
@@ -592,12 +571,12 @@ pub fn New(comptime Environment: type) type {
                             false => try self.stack.append(asUnsignedWord(-1)),
                         }
 
-                        continue :sw try decodeOp(rom[self.pc]);
+                        continue :sw try self.nextOp(rom);
                     }
 
                     try self.stack.append(asUnsignedWord(value >> @as(u8, @truncate(bits))));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .KECCAK256 => {
                     // TODO: Check zig stdlib or other packages. Also since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
@@ -637,7 +616,7 @@ pub fn New(comptime Environment: type) type {
 
                     _ = self.stack.pop().?;
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .MLOAD => {
                     // TODO
@@ -668,7 +647,7 @@ pub fn New(comptime Environment: type) type {
                     }
                     std.mem.writeInt(u256, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), value, .big);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 // TODO: Spit as appropriate when implementing.
                 .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS, .JUMPDEST => {
@@ -691,7 +670,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(0);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 // zig fmt: off
                 inline .PUSH1,  .PUSH2,  .PUSH3,  .PUSH4,  .PUSH5,  .PUSH6,  .PUSH7,  .PUSH8,
@@ -728,7 +707,7 @@ pub fn New(comptime Environment: type) type {
                     try self.stack.append(operand);
                     self.pc += offset;
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 // zig fmt: off
                 inline .DUP1, .DUP2,  .DUP3,  .DUP4,  .DUP5,  .DUP6,  .DUP7,  .DUP8,
@@ -744,7 +723,7 @@ pub fn New(comptime Environment: type) type {
 
                     try self.stack.append(self.stack.get(self.stack.len - offset));
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 // zig fmt: off
                 inline .SWAP1, .SWAP2,  .SWAP3,  .SWAP4,  .SWAP5,  .SWAP6,  .SWAP7,  .SWAP8,
