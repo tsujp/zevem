@@ -87,7 +87,7 @@ pub fn New(comptime Environment: type) type {
         stack: std.BoundedArray(WORD, MAX_STACK_DEPTH),
 
         /// Program counter / Instruction pointer.
-        // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later.
+        // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later. This is also means an unsigned pointer-sized integer so it could be very small if the target platform mandates so. Not sure what the concrete solution is right now, perhaps an explicit u256 (or a comptime platform variant) and then a range check during runtime.
         pc: usize,
 
         // TODO: Zig 0.14.0 deprecates managed container types. Unmanaged container types must pass the same allocator at the callsite for methods which require it and do so every time. Perhaps create a wrapper (or appropriate custom type) later on to ease this (potential) burden. Zig std ArrayHashMapWithAllocator is an example of such.
@@ -128,22 +128,36 @@ pub fn New(comptime Environment: type) type {
 
             // op_table[raw_bytecode].fee.dynamic();
 
-            // Validate stack requirements.
-            // const daop = @as(OpCode, @enumFromInt(raw_bytecode)) orelse return error.No;
-            // const daop = @as(OpCode, @enumFromInt(raw_bytecode));
-            // std.debug.print("opcode is: {any}\n", .{ daop });
             const opcode = std.meta.intToEnum(OpCode, raw_bytecode) catch return error.InvalidOpCode;
 
             return opcode;
         }
 
-        fn nextOp(self: *Self, raw_bytecode: u8) OpCode {
+        fn nextOp(self: *Self, rom: []const u8) !OpCode {
             // XXX: Validating the stack items here (might) be inefficient as not every opcode requires it (i.e. profile the actual impact) however it is simpler which is better for now (getting zevem working in the first place).
             // XXX: Also if validating stack items here the use of BoundedArray from stdlib is executing potentially useless assertions on presence of items (i.e. .pop() etc) which we could do without if this approach is favoured (i.e. after profiling).
             // const zt = zoneTrace(@src(), "nextOp");
             // defer zt.deinit();
-            defer self.pc += 1;
-            return @as(OpCode, @enumFromInt(raw_bytecode));
+            // defer self.pc += 1;
+
+            print("nextOp: rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
+
+            // Attempt to access beyond the end of bytecode is a STOP (op 0x00) per spec.
+            const raw_bytecode = if (self.pc >= rom.len) return OpCode.STOP else rom[self.pc];
+
+            const opcode = std.meta.intToEnum(OpCode, raw_bytecode) catch return error.InvalidOpCode;
+            const opinfo = op_table[raw_bytecode];
+
+            // Validate stack requirements.
+            // TODO: Explicit error set with payload information?
+            if (self.stack.len < opinfo.delta) return error.StackUnderflow;
+            if (MAX_STACK_DEPTH < (self.stack.len - opinfo.delta + opinfo.alpha)) {
+                std.debug.print("stackOverflow: stack_len={d}, op_delta={d}, op_alpha={d}\n", .{ self.stack.len, opinfo.delta, opinfo.alpha });
+
+                return error.StackOverflow;
+            }
+
+            return opcode;
         }
 
         // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
@@ -168,8 +182,9 @@ pub fn New(comptime Environment: type) type {
             defer zone.deinit();
 
             print("{s:=^60}\n", .{" EVM execute "});
+            print("rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
             // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
-            _ = sw: switch (try decodeOp(rom[self.pc])) {
+            _ = sw: switch (try self.nextOp(rom)) {
                 .STOP => |op| {
                     const zone_stop = tracy.initZone(@src(), .{ .name = "OP: STOP" });
                     defer zone_stop.deinit();
@@ -191,7 +206,7 @@ pub fn New(comptime Environment: type) type {
                     // TODO: Here and elsewhere with simpler modulo logic is this compiled to a bitwise AND? (and for others as appropriate). Use of this form involves peer type resolution so any overheads etc need to be investigated.
                     try self.stack.append(self.stack.pop().? +% self.stack.pop().?);
 
-                    continue :sw try decodeOp(rom[self.pc]);
+                    continue :sw try self.nextOp(rom);
                 },
                 .MUL => |op| {
                     traceOp(op, self.pc, .endln);
@@ -793,6 +808,6 @@ pub fn New(comptime Environment: type) type {
     };
 }
 
-test "blah" {
-    try std.testing.expect(true == true);
-}
+// test "blah" {
+//     try std.testing.expect(true == true);
+// }

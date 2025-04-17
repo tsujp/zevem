@@ -677,3 +677,48 @@ test "nonsense" {
     const err = evm.execute(&util.htb("0c"));
     try expectError(error.InvalidOpCode, err);
 }
+
+// TODO: These should be in evm.zig, here for now.
+test "stack underflow" {
+    // TODO: More scenarios when this API is more terse.
+    var dummyEnv: DummyEnv = .{};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = gpa.allocator();
+    var evm = try EVM.init(allocator, &dummyEnv);
+    const err = evm.execute(&util.htb("01"));
+    try expectError(error.StackUnderflow, err);
+}
+
+test "stack overflow" {
+    var dummyEnv: DummyEnv = .{};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = gpa.allocator();
+    var evm = try EVM.init(allocator, &dummyEnv);
+    try evm.stack.appendSlice(&[_]u256{1} ** 1024);
+    try expectEqual(evm.stack.len, 1024);
+    const err = evm.execute(&util.htb("5f"));
+    try expectError(error.StackOverflow, err);
+}
+
+test "out of bounds bytecode STOP" {
+    // Attempt to access bytecode at non-existent index is a STOP.
+    var dummyEnv: DummyEnv = .{};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = gpa.allocator();
+    var evm = try EVM.init(allocator, &dummyEnv);
+    try evm.stack.appendSlice(&[_]u256{1} ** 2);
+    try expectEqual(evm.stack.len, 2);
+    evm.pc = 420;
+    const res = try evm.execute(&util.htb("01"));
+
+    try expectEqual({}, res); // No error.
+    try expectEqual(evm.stack.len, 2); // Stack length unchanged.
+    const stk = [_]u256{1} ** 2;
+    try std.testing.expectEqualSlices(u256, &stk, evm.stack.constSlice()); // Stack contents unchanged.
+    // try expectEqual(420, evm.pc); // TODO: What does spec say, is pc +1 for the implicit STOP? So, 420 or 421 here?
+
+    // Essentially the same test except a happy case with implicit termination, we add 1 and 2 and do not finish our bytecode with 0x00 (STOP). The top of the stack should still be 3 and there should not be any error.
+    var impl = try basicBytecode("6001600201");
+    try expectEqual(impl.stack.len, 1);
+    try expectEqual(impl.stack.pop(), 3);
+}
