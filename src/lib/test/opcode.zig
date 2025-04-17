@@ -593,6 +593,10 @@ test "basic MSTORE" {
     try expect(std.mem.readInt(u256, overwrites.mem.items[0..32], .big) == 1);
 }
 
+test "basic JUMPDEST" {
+    // TODO
+}
+
 // TODO: Add super, super basic tests for PUSH0 .. PUSH32. Basically just one scenario per PUSHN because they are used in essentially every other test.
 
 test "basic DUP" {

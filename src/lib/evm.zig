@@ -90,6 +90,10 @@ pub fn New(comptime Environment: type) type {
         // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later. This is also means an unsigned pointer-sized integer so it could be very small if the target platform mandates so. Not sure what the concrete solution is right now, perhaps an explicit u256 (or a comptime platform variant) and then a range check during runtime.
         pc: usize,
 
+        /// Remaining gas available for transaction
+        // TODO: What's the actual upper limit (in the spec) for available gas?
+        gas: u64,
+
         // TODO: Zig 0.14.0 deprecates managed container types. Unmanaged container types must pass the same allocator at the callsite for methods which require it and do so every time. Perhaps create a wrapper (or appropriate custom type) later on to ease this (potential) burden. Zig std ArrayHashMapWithAllocator is an example of such.
         mem: std.ArrayListUnmanaged(u8),
 
@@ -105,6 +109,7 @@ pub fn New(comptime Environment: type) type {
             return Self{
                 .alloc = alloc,
                 .pc = 0,
+                .gas = 0,
                 .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
                 .env = env,
                 .mem = .empty,
@@ -624,10 +629,14 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 // TODO: Spit as appropriate when implementing.
-                .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS, .JUMPDEST => {
+                .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS => {
                     // TODO: Implement.
                     // TODO: Dynamic gas pricing.
                     return error.NotImplemented;
+                },
+                .JUMPDEST => {
+                    // Does nothing, is a metadata opcode to mark JUMP/JUMPI targets.
+                    continue :sw try self.nextOp(rom);
                 },
                 .TLOAD, .TSTORE => {
                     // TODO: gas pricing and notes on the spec of these two from eip-1153
@@ -685,7 +694,6 @@ pub fn New(comptime Environment: type) type {
                        .DUP9, .DUP10, .DUP11, .DUP12, .DUP13, .DUP14, .DUP15, .DUP16
                 // zig fmt: on
                 => |op| {
-                    // TODO: EVM yellowpaper lists very large added/deleted stack items for these, e.g. DUP10 deletes 10 stack items and adds 11. Is that _literally_ happening though, because it doesn't look like it or really make sense if it is.
                     traceOp(op, self.pc, .endln);
 
                     // Offset vs DUP1 is index from top of stack + 1 to duplicate.
@@ -740,6 +748,9 @@ pub fn New(comptime Environment: type) type {
                 },
                 .INVALID => {
                     // TODO: Implement (but what, double check do we just do nothing or is this an error.. it is called "invalid").
+                    // TODO: Instead of nextOp returning error.InvalidOpCode it should set the opcode to .INVALID as spec says this opcode is executed upon its literal encounter or any other invalid opcode.
+                    // TODO: Consume all remaining gas.
+                    // TODO: State revert to before given bytecode executed.
                     return error.NotImplemented;
                 },
                 .SELFDESTRUCT => {
@@ -747,11 +758,6 @@ pub fn New(comptime Environment: type) type {
                     // TODO: Has dynamic gas see appendix G and its opcode definition H.2
                     return error.NotImplemented;
                 },
-                // TEMPORARY.
-                // TODO: Do we want catch unreachable here (in which case make OpCode enum non-exhaustive) or do we want a prong to prevent runtime crashes and log the unhandled opcode. I guess the latter.
-                // else => {
-                //     return error.UnknownType;
-                // },
             };
         }
     };
