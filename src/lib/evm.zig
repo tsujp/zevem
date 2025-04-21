@@ -6,22 +6,27 @@ const native_endian = builtin.cpu.arch.endian();
 // TODO: FalsePattern's zig-tracy no-ops its functions if we don't enable it, but also check our own usage is no-op'd when not in-use.
 const tracy = @import("tracy");
 
+const types = @import("types.zig");
+
 const OpCode = @import("op.zig").Enum;
 const op_table = @import("op.zig").table;
 
 const MAX_STACK_DEPTH = 1024;
 
-const WORD = u256;
-const DOUBLE_WORD = u512;
+const Word = types.Word;
+const DoubleWord = types.DoubleWord;
+const SignedWord = types.SignedWord;
+// const WORD = u256;
+// const DOUBLE_WORD = u512;
 
-const SIGNED_WORD = i256;
+// const SIGNED_WORD = i256;
 
-const WORD_SIGN_MASK = (1 << @typeInfo(WORD).int.bits - 1);
+const WORD_SIGN_MASK = (1 << @typeInfo(Word).int.bits - 1);
 
-const WORD_MAX: WORD = std.math.maxInt(WORD);
+const WORD_MAX: Word = std.math.maxInt(Word);
 
-const BYTES_IN_WORD = @divExact(@typeInfo(WORD).int.bits, 8);
-const BITS_IN_WORD: u16 = @typeInfo(WORD).int.bits;
+const BYTES_IN_WORD = @divExact(@typeInfo(Word).int.bits, 8);
+const BITS_IN_WORD: u16 = @typeInfo(Word).int.bits;
 
 // TODO: EVM single allocation at start (configurable size or avoid using that strategy). Pass in desired context along with bytecode for easier simulation (e.g. devs, EIPs etc). For now: make a VM with pre-canned bytecode.
 // TODO: Scoped logging.
@@ -38,7 +43,7 @@ fn traceOp(op: OpCode, pc: usize, endline: TraceEndline) void {
 }
 
 // Meant to print _additional_ information for PUSH1 ... PUSH32.
-fn traceOpPush(pc: usize, operand: WORD) void {
+fn traceOpPush(pc: usize, operand: Word) void {
     print("new_pc={d}, pushed=0x{x}\n", .{ pc, operand });
 }
 
@@ -84,7 +89,7 @@ pub fn New(comptime Environment: type) type {
         env: *Environment,
 
         // TODO: Custom data structure for our stack (optimisation).
-        stack: std.BoundedArray(WORD, MAX_STACK_DEPTH),
+        stack: std.BoundedArray(Word, MAX_STACK_DEPTH),
 
         /// Program counter / Instruction pointer.
         // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later. This is also means an unsigned pointer-sized integer so it could be very small if the target platform mandates so. Not sure what the concrete solution is right now, perhaps an explicit u256 (or a comptime platform variant) and then a range check during runtime.
@@ -110,7 +115,7 @@ pub fn New(comptime Environment: type) type {
                 .alloc = alloc,
                 .pc = 0,
                 .gas = 0,
-                .stack = try std.BoundedArray(WORD, MAX_STACK_DEPTH).init(0),
+                .stack = try std.BoundedArray(Word, MAX_STACK_DEPTH).init(0),
                 .env = env,
                 .mem = .empty,
                 .return_data = &[0]u8{},
@@ -155,12 +160,12 @@ pub fn New(comptime Environment: type) type {
 
         // TODO: Have these as a comptime function which will inline flip the sign instead?
 
-        inline fn asSignedWord(value: WORD) SIGNED_WORD {
-            return @as(SIGNED_WORD, @bitCast(value));
+        inline fn asSignedWord(value: Word) SignedWord {
+            return @as(SignedWord, @bitCast(value));
         }
 
-        inline fn asUnsignedWord(value: SIGNED_WORD) WORD {
-            return @as(WORD, @bitCast(value));
+        inline fn asUnsignedWord(value: SignedWord) Word {
+            return @as(Word, @bitCast(value));
         }
 
         // XXX: Is this actually useful? Trying to make things clearer.
@@ -312,10 +317,10 @@ pub fn New(comptime Environment: type) type {
 
                     // s[0] = base ; s[1] = exponent.
 
-                    var base: DOUBLE_WORD = self.stack.pop().?;
+                    var base: DoubleWord = self.stack.pop().?;
                     var exponent = self.stack.pop().?;
 
-                    var result: DOUBLE_WORD = 1;
+                    var result: DoubleWord = 1;
 
                     // Right-to-left binary exponentiation.
                     while (exponent > 0) : (exponent >>= 1) {
@@ -330,7 +335,7 @@ pub fn New(comptime Environment: type) type {
                     // Pedantic overflow check; could use @intCast instead.
                     std.debug.assert(result <= WORD_MAX);
 
-                    try self.stack.append(@as(WORD, @truncate(result)));
+                    try self.stack.append(@as(Word, @truncate(result)));
 
                     continue :sw try self.nextOp(rom);
                 },
@@ -348,7 +353,7 @@ pub fn New(comptime Environment: type) type {
                     // meaningful-maximum, as we add 1) and if s[0] is above 31 nothing is done to
                     // s[1].
 
-                    // Extension is always done up to WORD size.
+                    // Extension is always done up to Word size.
 
                     const bytes = self.stack.pop().? + 1;
 
@@ -396,9 +401,9 @@ pub fn New(comptime Environment: type) type {
 
                     // zig fmt: off
                     try self.stack.append(@intFromBool(
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))
+                        @as(SignedWord, @bitCast(self.stack.pop().?))
                             <
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))));
+                        @as(SignedWord, @bitCast(self.stack.pop().?))));
                     // zig fmt: on
 
                     continue :sw try self.nextOp(rom);
@@ -410,9 +415,9 @@ pub fn New(comptime Environment: type) type {
 
                     // zig fmt: off
                     try self.stack.append(@intFromBool(
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))
+                        @as(SignedWord, @bitCast(self.stack.pop().?))
                             >
-                        @as(SIGNED_WORD, @bitCast(self.stack.pop().?))));
+                        @as(SignedWord, @bitCast(self.stack.pop().?))));
                     // zig fmt: on
 
                     continue :sw try self.nextOp(rom);
@@ -479,7 +484,7 @@ pub fn New(comptime Environment: type) type {
 
                     const offset = self.stack.pop().?;
 
-                    // s[0] above amount of bytes in WORD, shortcut response to 0.
+                    // s[0] above amount of bytes in Word, shortcut response to 0.
                     if (offset >= BYTES_IN_WORD) {
                         self.stack.set(self.stack.len - 1, 0);
 
@@ -507,14 +512,14 @@ pub fn New(comptime Environment: type) type {
 
                     const bits = self.stack.pop().?;
 
-                    // Trying to shift left over 255 (WORD bits - 1) places shortcut to zero.
-                    if (bits >= @typeInfo(WORD).int.bits) {
+                    // Trying to shift left over 255 (Word bits - 1) places shortcut to zero.
+                    if (bits >= @typeInfo(Word).int.bits) {
                         _ = self.stack.pop().?; // XXX: Ripe for top of stack set.
                         try self.stack.append(0);
                         continue :sw try self.nextOp(rom);
                     }
 
-                    // TODO: u8 being log2(u256) i.e. log2(WORD) is all the reflection on WORD worth it? Idea being maybe someone could (idk why) change WORD to.. u128 but then it wouldn't be the EVM (unless the spec changed) etc.
+                    // TODO: u8 being log2(u256) i.e. log2(Word) is all the reflection on Word worth it? Idea being maybe someone could (idk why) change Word to.. u128 but then it wouldn't be the EVM (unless the spec changed) etc.
                     try self.stack.append(self.stack.pop().? << @as(u8, @truncate(bits)));
 
                     continue :sw try self.nextOp(rom);
@@ -526,8 +531,8 @@ pub fn New(comptime Environment: type) type {
 
                     const bits = self.stack.pop().?;
 
-                    // Trying to shift right over 255 (WORD bits - 1) places shortcut to zero.
-                    if (bits >= @typeInfo(WORD).int.bits) {
+                    // Trying to shift right over 255 (Word bits - 1) places shortcut to zero.
+                    if (bits >= @typeInfo(Word).int.bits) {
                         _ = self.stack.pop().?;
                         try self.stack.append(0);
                         continue :sw try self.nextOp(rom);
@@ -548,8 +553,8 @@ pub fn New(comptime Environment: type) type {
                     const bits = self.stack.pop().?;
                     const value = asSignedWord(self.stack.pop().?);
 
-                    // Trying to shift right over 255 (WORD bits - 1) places shortcut...
-                    if (bits >= @typeInfo(WORD).int.bits) {
+                    // Trying to shift right over 255 (Word bits - 1) places shortcut...
+                    if (bits >= @typeInfo(Word).int.bits) {
                         switch (value > 0) {
                             // ...positive so 0
                             true => try self.stack.append(0),
@@ -582,18 +587,46 @@ pub fn New(comptime Environment: type) type {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },
-                // TODO: Spit as appropriate when implementing.
-                .BLOCKHASH, .COINBASE, .TIMESTAMP => {
+                .BLOCKHASH => {
                     // TODO: Implement.
                     return error.NotImplemented;
+                },
+                .COINBASE => {
+                    try self.stack.append(self.env.block.beneficiary);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .TIMESTAMP => {
+                    try self.stack.append(self.env.block.timestamp);
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .NUMBER => {
                     try self.stack.append(self.env.block.number);
 
                     continue :sw try self.nextOp(rom);
                 },
-                .PREVRANDAO, .GASLIMIT, .CHAINID, .SELFBALANCE, .BASEFEE => {
+                .PREVRANDAO => {
+                    try self.stack.append(self.env.block.randao);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .GASLIMIT => {
+                    try self.stack.append(self.env.block.gas_limit);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .CHAINID => {
                     // TODO: Implement.
+                    return error.NotImplemented;
+                },
+                .SELFBALANCE => {
+                    // TODO: Implement.
+                    return error.NotImplemented;
+                },
+                .BASEFEE => {
+                    try self.stack.append(self.env.block.base_fee);
+
                     return error.NotImplemented;
                 },
                 .BLOBHASH => {
@@ -685,8 +718,8 @@ pub fn New(comptime Environment: type) type {
 
                     const operand_bytes = rom[self.pc..][0..offset];
 
-                    // std.mem.readInt does not 0-pad types less than requested size, so we construct and reify the `type` we need then upcast to WORD.
-                    const operand = @as(WORD, std.mem.readInt(
+                    // std.mem.readInt does not 0-pad types less than requested size, so we construct and reify the `type` we need then upcast to Word.
+                    const operand = @as(Word, std.mem.readInt(
                         @Type(.{ .int = .{
                             .signedness = .unsigned,
                             .bits = 8 * operand_bytes.len,
