@@ -1,0 +1,28 @@
+on:
+    push: {}
+    pull_request: {}
+    workflow_dispatch: {}
+
+name: Test
+
+# TODO: Many architectures tested. A few different distros (just ubuntu, debian, fedora for now).
+# TODO: Check formatting I guess.
+# TODO: Create and publish a code coverage report with K Conv or whatever that thing is.
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Setup Zig
+          uses: mlugg/setup-zig@v1
+          with:
+              version: 0.14.0
+
+        - name: Test in debug mode
+          run: zig build test --summary all
+
+        - name: Test in release-fast mode
+          run: zig build test --summary all --release=fast
