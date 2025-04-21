@@ -27,7 +27,7 @@ pub const util = struct {
     // TODO: Replace this with test files on-disk which are read to execute EVM instructions and then the unit test in Zig code is about asserting expected values; or do it all in-code but in any case abstract creation of EVM.
     // TODO: Probably also want some re-usable one to avoid re-allocating every single time in these unit tests? But fresh context is important, but also testing properly is important.
     pub fn evmBasicBytecode(comptime bytes: []const u8) !EVM {
-        var dummyEnv: DummyEnv = .{};
+        var dummyEnv: DummyEnv = .default;
 
         var gpa: std.heap.DebugAllocator(.{}) = .init;
         const allocator = gpa.allocator();

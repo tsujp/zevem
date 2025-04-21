@@ -34,7 +34,7 @@ const TraceEndline = enum {
 // XXX: Could have an instruction struct/enum/tagged-union which @calls and inlines some so OP_PUSH3 finds the associated (internal) instruction which has the logic to execute OP_PUSH3 but also things like gas pricing, and any logging. Investigate later, feels too spaghetti for right now.
 // TODO: Better interface/implementation or just _stuff_ around tracing; idk. Do later even though it's extremely tempting to hack on cool comptime things now.
 fn traceOp(op: OpCode, pc: usize, endline: TraceEndline) void {
-    print("{x:0>6}\u{001b}[2m:{d:<3}\u{001b}[0m  \u{001b}[2m{x:0>2}:\u{001b}[0m{s:<6}{s}", .{ pc, pc, @intFromEnum(op), @tagName(op), if (endline == .endln) "\n" else "\t" });
+    print("0x{x:0>6}\u{001b}[2m:{d:<3}\u{001b}[0m  \u{001b}[2m0x{x:0>2}:\u{001b}[0m{s:<6}{s}", .{ pc, pc, @intFromEnum(op), @tagName(op), if (endline == .endln) "\n" else "\t" });
 }
 
 // Meant to print _additional_ information for PUSH1 ... PUSH32.
@@ -125,7 +125,8 @@ pub fn New(comptime Environment: type) type {
             // defer zt.deinit();
             // defer self.pc += 1;
 
-            print("nextOp: rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
+            // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
+            // print("nextOp: rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
 
             // Attempt to access beyond the end of bytecode is a STOP (op 0x00) per spec.
             const raw_bytecode = if (self.pc >= rom.len) return OpCode.STOP else rom[self.pc];
@@ -134,6 +135,9 @@ pub fn New(comptime Environment: type) type {
 
             const opcode = std.meta.intToEnum(OpCode, raw_bytecode) catch return error.InvalidOpCode;
             const opinfo = op_table[raw_bytecode];
+
+            // TODO: Conditionally only execute traceOp if this is a debug build, or has a build argument (e.g. with-tracing or something).
+            traceOp(opcode, self.pc, .endln);
 
             // Validate stack requirements.
             // TODO: Explicit error set with payload information?
@@ -169,16 +173,16 @@ pub fn New(comptime Environment: type) type {
             defer zone.deinit();
 
             print("{s:=^60}\n", .{" EVM execute "});
-            print("rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
+
+            // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
+            // print("rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
+
             // JORDAN: So this labelled switch API is nice but makes adding disassemly and debug information more verbose vs. a while loop over the rom which can invoke any such logic in one-ish place. Beyond inline functions at comptime based on build flags (i.e. if debug build, inline some debug functions) runtime debugging would require a check at every callsite for debug output I think. Is this the cost to pay? Tradeoffs etc.
             _ = sw: switch (try self.nextOp(rom)) {
-                .STOP => |op| {
+                .STOP => {
                     // const zone_stop = tracy.initZone(@src(), .{ .name = "OP: STOP" });
                     // defer zone_stop.deinit();
                     // tracy.message("STOP executed");
-                    traceOp(op, self.pc, .endln);
-                    // TODO: Why would STOP increment the program counter? Check what the spec requires here, feels like it shouldn't.
-                    // self.pc += 1;
 
                     // TODO: Here and for other halt opcodes return with error union so we can execute appropriate post-halt actions.
                     return;
@@ -584,7 +588,7 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .NUMBER => {
-                    try self.stack.append(try self.env.getNumber());
+                    try self.stack.append(self.env.block.number);
 
                     continue :sw try self.nextOp(rom);
                 },

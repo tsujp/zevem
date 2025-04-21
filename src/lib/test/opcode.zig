@@ -528,7 +528,19 @@ test "basic BALANCE" {
 }
 
 test "basic NUMBER" {
-    // TODO:
+    const dummy_default = try basicBytecode("4300");
+    try std.testing.expectEqualSlices(u256, &[_]u256{0}, dummy_default.stack.constSlice());
+
+    // Expect a specific value from the environment.
+    var dummyEnv: DummyEnv = .default;
+    dummyEnv.block.number = 1234;
+
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = gpa.allocator();
+    var evm = try EVM.init(allocator, &dummyEnv);
+    const res = try evm.execute(&util.htb("4300"));
+    try expectEqual({}, res); // No error.
+    try std.testing.expectEqualSlices(u256, &[_]u256{1234}, evm.stack.constSlice());
 }
 
 test "basic POP" {
@@ -661,7 +673,7 @@ test "basic RETURN" {
 
 test "basic REVERT" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then revert.
-    var dummyEnv: DummyEnv = .{};
+    var dummyEnv: DummyEnv = .default;
 
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
@@ -678,7 +690,7 @@ test "basic REVERT" {
 
 test "nonsense" {
     // TODO: Way to have all of this on one return type for nicer testing.
-    var dummyEnv: DummyEnv = .{};
+    var dummyEnv: DummyEnv = .default;
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
     var evm = try EVM.init(allocator, &dummyEnv);
@@ -689,7 +701,7 @@ test "nonsense" {
 // TODO: These should be in evm.zig, here for now.
 test "stack underflow" {
     // TODO: More scenarios when this API is more terse.
-    var dummyEnv: DummyEnv = .{};
+    var dummyEnv: DummyEnv = .default;
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
     var evm = try EVM.init(allocator, &dummyEnv);
@@ -698,7 +710,7 @@ test "stack underflow" {
 }
 
 test "stack overflow" {
-    var dummyEnv: DummyEnv = .{};
+    var dummyEnv: DummyEnv = .default;
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
     var evm = try EVM.init(allocator, &dummyEnv);
@@ -710,7 +722,7 @@ test "stack overflow" {
 
 test "out of bounds bytecode STOP" {
     // Attempt to access bytecode at non-existent index is a STOP.
-    var dummyEnv: DummyEnv = .{};
+    var dummyEnv: DummyEnv = .default;
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
     var evm = try EVM.init(allocator, &dummyEnv);
@@ -718,7 +730,6 @@ test "out of bounds bytecode STOP" {
     try expectEqual(evm.stack.len, 2);
     evm.pc = 420;
     const res = try evm.execute(&util.htb("01"));
-
     try expectEqual({}, res); // No error.
     try expectEqual(evm.stack.len, 2); // Stack length unchanged.
     const stk = [_]u256{1} ** 2;
