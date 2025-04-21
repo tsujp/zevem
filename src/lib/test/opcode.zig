@@ -527,6 +527,10 @@ test "basic BALANCE" {
     // TODO:
 }
 
+test "basic NUMBER" {
+    // TODO:
+}
+
 test "basic POP" {
     // Push 2 items, pop twice for great success!
     const a = try basicBytecode("600161cafe505000");

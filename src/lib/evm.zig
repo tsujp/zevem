@@ -579,7 +579,16 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 // TODO: Spit as appropriate when implementing.
-                .BLOCKHASH, .COINBASE, .TIMESTAMP, .NUMBER, .PREVRANDAO, .GASLIMIT, .CHAINID, .SELFBALANCE, .BASEFEE => {
+                .BLOCKHASH, .COINBASE, .TIMESTAMP => {
+                    // TODO: Implement.
+                    return error.NotImplemented;
+                },
+                .NUMBER => {
+                    try self.stack.append(try self.env.getNumber());
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .PREVRANDAO, .GASLIMIT, .CHAINID, .SELFBALANCE, .BASEFEE => {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },
