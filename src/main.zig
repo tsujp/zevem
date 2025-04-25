@@ -13,8 +13,10 @@ pub fn main() !void {
     defer zone.deinit();
     print("Hello, command-line world!\n", .{});
 
-    var dummyEnv = zevem.DummyEnv{};
-    var evm2 = try EVM.init(&dummyEnv);
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = gpa.allocator();
+    var dummyEnv = zevem.DummyEnv{ .block = .default };
+    var evm2 = try EVM.init(allocator, &dummyEnv);
     try evm2.execute(&.{ 0x5F, 0x60, 0x11, 0x61, 0x22, 0x33, 0x00 });
     print("Done!", .{});
 }
