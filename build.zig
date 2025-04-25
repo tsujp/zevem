@@ -69,6 +69,9 @@ pub fn build(b: *std.Build) !void {
         });
 
         exe_mod.addImport("tracy", tracy.module("tracy"));
+        const run_interpreter = b.addRunArtifact(exe);
+        const run_step = b.step("run", "Run the interpreter");
+        run_step.dependOn(&run_interpreter.step);
 
         if (want_tracy) {
             // exe_mod.addImport("tracy", tracy.module("tracy"));
