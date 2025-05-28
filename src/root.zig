@@ -1,7 +1,7 @@
 //! Library (zevem) root.
 
 const std = @import("std");
-const evm = @import("lib/evm.zig");
+pub const evm = @import("lib/evm.zig");
 pub const DummyEnv = @import("lib/DummyEnv.zig");
 
 test {
