@@ -15,12 +15,16 @@ pub fn build(b: *std.Build) !void {
 
     // TODO: Add warning text if tracy is enabled that notes the performance impact (for people who might accidentally be doing so).
 
-    // TODO: I think createModule is correct here, addModule does the same but also adds the module to this package's module set so our dependents can access it but AFAIU that would be for dependencies _this_ package has that we want to allow our dependents (consumers) to also have access to (e.g. for config or whatever).
-    const lib_mod = b.createModule(.{
+    const lib_mod = b.addModule("zevem", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
+    const lib = b.addStaticLibrary(.{
+        .name = "zevem",
+        .root_module = lib_mod,
+    });
+    b.installArtifact(lib);
 
     const lib_test = b.addTest(.{
         .root_module = lib_mod,
