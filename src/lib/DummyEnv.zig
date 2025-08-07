@@ -12,6 +12,6 @@ pub fn init(block: types.BlockHeader) DummyEnv {
     return .{ .block = block };
 }
 
-pub fn getBalance(_: *DummyEnv, _: u256) !u256 {
+pub fn getBalance(_: *DummyEnv) !u256 {
     return 0;
 }
