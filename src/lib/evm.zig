@@ -579,8 +579,7 @@ pub fn New(comptime Environment: type) type {
                 .BALANCE => |op| {
                     traceOp(op, self.pc, .endln);
 
-                    // in-place replace the content of the balance
-                    self.stack.set(self.stack.len - 1, try self.env.getBalance(self.stack.get(self.stack.len - 1)));
+                    try self.stack.append(try self.env.getBalance());
                 },
                 // TODO: Spit as appropriate when implementing.
                 .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
