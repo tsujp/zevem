@@ -314,6 +314,14 @@ An enum of opcodes tagged with a u8 provides constant time lookup, but how to as
 
 Is a multiarraylist but keyed by an enum an option?
 
+* Project Focus
+
+Current area of focus so I don't forget what I was doing.
+
+** TODO Message Call
+
+TODO: Finish refreshing myself on what I need to catch up on here.
+
 * Zig
 
 ** Datastructures
@@ -551,6 +559,8 @@ Maybe (if things like tracy or valgrind for whatever reason aren't good enough, 
 :visibility: outline
 :END:
 
+** TODO Unbreak CI from types changes in commit: 3375a031342a3b19e80dc25b66ceeacb1827b7fc 
+** TODO Update to Zig 0.14.1
 ** TODO Would keccak_p.zig benefit from the labelled switch api changes?
 See: https://ziglang.org/documentation/master/std/#src/std/crypto/keccak_p.zig
 
