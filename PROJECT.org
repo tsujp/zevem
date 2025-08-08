@@ -108,7 +108,7 @@ All transactions have common fields:
 
 EIP-2718 transaction type.
 
-****** none
+****** nonce
 :PROPERTIES:
 :YPNotation: T_n -- italic capital t, subscript n
 :END:
@@ -194,7 +194,7 @@ yp pg5 left side.
 
 Type 2 transactions specify gas pricing differently to type 0 and type 1.
 
-****** Legacy, EIP-2910 Gas Pricing
+****** Legacy, EIP-2930 Gas Pricing
 
 Single field.
 
@@ -550,6 +550,11 @@ Maybe (if things like tracy or valgrind for whatever reason aren't good enough, 
 :PROPERTIES:
 :visibility: outline
 :END:
+
+** TODO Would keccak_p.zig benefit from the labelled switch api changes?
+See: https://ziglang.org/documentation/master/std/#src/std/crypto/keccak_p.zig
+
+The State function loops over some enums, that to function could use a labelled switch instead?
 
 ** TODO Any of that snapshot testing for everyone from tigerbeetle appropriate for our opcode unit tests later on?
 
