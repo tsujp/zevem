@@ -3,11 +3,15 @@
 const std = @import("std");
 const print = std.debug.print;
 const EnumField = std.builtin.Type.EnumField;
+const EnumMap = std.enums.EnumMap;
 const comptimePrint = std.fmt.comptimePrint;
 
 // XXX: Can't seem to access as struct members if using top-level fields in op.zig so consume from op.zig `pub const ...` instead.
 pub const Enum = OpCodes.Enum;
 pub const table = OpCodes.table;
+
+pub const Fee = FeeSchedule;
+pub const fee_table = fee_map;
 
 // XXX: Arguably overengineered versus just hardcoding u8 and 256.
 const OPCODE_SIZE = u8;
@@ -26,7 +30,7 @@ const GasCost = struct {
 // 3. Increase in usage of memory.
 // Total fee for memory usage payable is proportional to smallest multiple of 32 bytes required such that all memory indices (read or write) are included in that range. Paid just-in-time. So, accessing area of memory at least 32 bytes greater than any previously indexed memory will result in increased fee.
 
-// TODO: Map this to the scalar values of appendix G.
+// Scalar values of appendix G.
 const FeeSchedule = enum {
     zero,
     jumpdest,
@@ -67,6 +71,52 @@ const FeeSchedule = enum {
     // TODO: Remove this field later.
     TODO_CUSTOM_FEE,
 };
+
+// TODO: Can this be optimised?
+// XXX: u16 would be maximum (via log2(32_000), since 32_000 is largest scalar in this set) but
+//      since we need to count gas and BlockHeader, and EVM (anonymous struct) both use gas as
+//      u64 we'll just use u64 here to prevent a lot of @intCast etc. Likely the latter is the
+//      way to go in the end state if this EnumMap is still used, TL;DR optimise.
+const fee_map = EnumMap(FeeSchedule, u16).init(.{
+    .zero = 0,
+    .jumpdest = 1,
+    .base = 2,
+    .verylow = 3,
+    .low = 5,
+    .mid = 8,
+    .high = 10,
+    .warmaccess = 1_000,
+    .accesslistaddress = 2_400,
+    .accessliststorage = 1_900,
+    .coldaccountaccess = 2_600,
+    .coldsload = 2_100,
+    .sset = 20_000,
+    .sreset = 2_900,
+    .sclear = 4_800,
+    .selfdestruct = 5_000,
+    .create = 32_000,
+    .codedeposit = 200,
+    .initcodeword = 2,
+    .callvalue = 9_000,
+    .callstipend = 2_300,
+    .newaccount = 25_000,
+    .exp = 10,
+    .expbyte = 50,
+    .memory = 3,
+    .txcreate = 32_000,
+    .txdatazero = 4,
+    .txdatanonzero = 16,
+    .transaction = 21_000,
+    .log = 375,
+    .logdata = 8,
+    .logtopic = 375,
+    .keccak256 = 30,
+    .keccak256word = 6,
+    .copy = 3,
+    .blockhash = 20,
+    // TODO: Remove this field later.
+    // .TODO_CUSTOM_FEE = 42069,
+});
 
 // TODO: Largest actual delta or alpha appears to be 7, so 3 bits, but using 5 to keep things more literal for now (i.e. SWAP and DUP large delta/alpha in yellowpaper).
 const OpInfo = struct {

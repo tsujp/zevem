@@ -4,8 +4,9 @@ pub const Word = u256;
 pub const DoubleWord = u512;
 pub const SignedWord = i256;
 
-// No maths done on addresses (until Verkle) so array of 20 bytes better.
-pub const Address = [20]u8;
+// XXX: [20]u8 would represent this better but then we need to parseInt convert to/from the
+//      array of bytes.
+pub const Address = u160;
 
 pub const Hash32 = [32]u8;
 pub const Bytes32 = [32]u8;

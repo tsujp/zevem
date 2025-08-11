@@ -11,6 +11,9 @@ const types = @import("types.zig");
 const OpCode = @import("op.zig").Enum;
 const op_table = @import("op.zig").table;
 
+const Fee = @import("op.zig").Fee;
+const fee_table = @import("op.zig").fee_table;
+
 const MAX_STACK_DEPTH = 1024;
 
 const Word = types.Word;
@@ -85,7 +88,6 @@ pub fn New(comptime Environment: type) type {
         const Self = @This();
         // TODO: ROM context.
         // TODO: Nested EVMs.
-        // TODO: Gas.
         env: *Environment,
 
         // TODO: Custom data structure for our stack (optimisation).
@@ -95,8 +97,7 @@ pub fn New(comptime Environment: type) type {
         // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later. This is also means an unsigned pointer-sized integer so it could be very small if the target platform mandates so. Not sure what the concrete solution is right now, perhaps an explicit u256 (or a comptime platform variant) and then a range check during runtime.
         pc: usize,
 
-        /// Remaining gas available for transaction
-        // TODO: What's the actual upper limit (in the spec) for available gas?
+        /// Gas consumed by transaction execution.
         gas: u64,
 
         // TODO: Zig 0.14.0 deprecates managed container types. Unmanaged container types must pass the same allocator at the callsite for methods which require it and do so every time. Perhaps create a wrapper (or appropriate custom type) later on to ease this (potential) burden. Zig std ArrayHashMapWithAllocator is an example of such.
@@ -160,6 +161,10 @@ pub fn New(comptime Environment: type) type {
 
         // TODO: Have these as a comptime function which will inline flip the sign instead?
 
+        inline fn getFee(name: Fee) u64 {
+            return @intCast(fee_table.get(name).?);
+        }
+
         inline fn asSignedWord(value: Word) SignedWord {
             return @as(SignedWord, @bitCast(value));
         }
@@ -178,6 +183,10 @@ pub fn New(comptime Environment: type) type {
             defer zone.deinit();
 
             print("{s:=^60}\n", .{" EVM execute "});
+
+            // TODO: The rest of the upfront gas cost per figure 64 of YP.
+            // self.gas += fee_table.get(.transaction);
+            self.gas += getFee(.transaction);
 
             // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
             // print("rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
@@ -571,6 +580,7 @@ pub fn New(comptime Environment: type) type {
                 },
                 .KECCAK256 => {
                     // TODO: Check zig stdlib or other packages. Also since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
+                    return error.NotImplemented;
                 },
                 .ADDRESS => {
                     // TODO
@@ -606,9 +616,12 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .PREVRANDAO => {
-                    try self.stack.append(self.env.block.randao);
+                    // TODO: Need to decide on data representation.
 
-                    continue :sw try self.nextOp(rom);
+                    return error.NotImplemented;
+                    // try self.stack.append(self.env.block.randao);
+
+                    // continue :sw try self.nextOp(rom);
                 },
                 .GASLIMIT => {
                     try self.stack.append(self.env.block.gas_limit);
@@ -711,6 +724,10 @@ pub fn New(comptime Environment: type) type {
                     zt.text(@tagName(op));
                     defer zt.deinit();
 
+                    // TODO: YP for PUSH1 to PUSH32 defines function c:
+                    // "The function c ensures the bytes default to zero if they extend past the limits"
+                    // ^^^ Make sure we're doing this. Add a test trying to push outside bytecode range, it should succeed.
+
                     // Offset vs PUSH0 is amount of bytes to read forward and push onto stack as
                     // this instructions operand.
                     const offset = @intFromEnum(op) - @intFromEnum(OpCode.PUSH0);
@@ -754,6 +771,7 @@ pub fn New(comptime Environment: type) type {
                 // zig fmt: on
                 => {
                     // TODO
+                    return error.NotImplemented;
                 },
                 // zig fmt: off
                 inline .LOG0, .LOG1, .LOG2, .LOG3, .LOG4,

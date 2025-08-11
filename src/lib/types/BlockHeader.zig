@@ -28,11 +28,11 @@ base_fee: u64, // TODO: Bigger type since denominated in Wei and can overflow a 
 // Decl literals for easier initialisation.
 pub const default: BlockHeader = .{
     // TODO: Reasonable default values for this.
-    .parent_hash = 1,
+    .parent_hash = [_]u8{0} ** 32,
     .beneficiary = 0,
     .number = 0,
     .gas_limit = 30_000_000, // Arbitrary.
     .timestamp = 4,
-    .randao = 5,
+    .randao = [_]u8{0} ** 32,
     .base_fee = 6,
 };
