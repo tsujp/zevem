@@ -9,6 +9,7 @@ test {
 
     // Tests under lib/test are for convenience as they include a lot of cases.
     _ = @import("lib/test/opcode.zig");
+    _ = @import("lib/test/gas.zig");
 }
 
 // TODO: test-filter now works as expected. It looks like under the old setup before this commit that test filter broke after lib.test. but im unsure why that would be the case. Try and get a minimal reproduction to see what the issue is and report the bug.

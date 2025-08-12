@@ -53,8 +53,11 @@ fn traceOpPush(pc: usize, operand: Word) void {
 // Meant to print _additional_ information for opcodes which take 2 items off the stack then put 1 back on.
 fn traceStackTake() void {}
 
+// TODO [2025/08/12]: I had something planned in the past with errors and them having some
+//   contextual values (e.g. associated data) but cannot remember right now.
 pub const EvmError = error{
     Revert,
+    OutOfGas,
 };
 
 // TODO: Output test binary so I can run poop on that.
@@ -97,7 +100,7 @@ pub fn New(comptime Environment: type) type {
         // TODO: By spec is a u256, cannot use a u256 to address std.BoundedArray as-is. Fix later. This is also means an unsigned pointer-sized integer so it could be very small if the target platform mandates so. Not sure what the concrete solution is right now, perhaps an explicit u256 (or a comptime platform variant) and then a range check during runtime.
         pc: usize,
 
-        /// Gas consumed by transaction execution.
+        /// Remaining gas available for executing transaction: T_g
         gas: u64,
 
         // TODO: Zig 0.14.0 deprecates managed container types. Unmanaged container types must pass the same allocator at the callsite for methods which require it and do so every time. Perhaps create a wrapper (or appropriate custom type) later on to ease this (potential) burden. Zig std ArrayHashMapWithAllocator is an example of such.
@@ -115,7 +118,8 @@ pub fn New(comptime Environment: type) type {
             return Self{
                 .alloc = alloc,
                 .pc = 0,
-                .gas = 0,
+                // TODO: Do we want/need a MessageCall struct yet? I think so but for now one can set the gas limit before execution by assigning to .gas on the returned EVM struct.
+                .gas = 21_000, // Default just enough to cover G_transaction.
                 .stack = try std.BoundedArray(Word, MAX_STACK_DEPTH).init(0),
                 .env = env,
                 .mem = .empty,
@@ -178,6 +182,14 @@ pub fn New(comptime Environment: type) type {
             return @as(u8, @truncate(value));
         }
 
+        // XXX: Here and above inline functions, remove the `inline` keyword so the compiler can
+        //      compute the optimisation itself? Benchmark/optimise.
+        inline fn consumeGas(self: *Self, name: Fee) !u64 {
+            const fee = getFee(name);
+            if (fee > self.gas) return EvmError.OutOfGas;
+            return fee;
+        }
+
         pub fn execute(self: *Self, rom: []const u8) !void {
             const zone = tracy.initZone(@src(), .{ .name = "EVM execute" });
             defer zone.deinit();
@@ -185,14 +197,15 @@ pub fn New(comptime Environment: type) type {
             // Print execution information at terminal halting state.
             defer {
                 // TODO: return data, stack size, pc (although pc implied from bytecode output)
-                print("[HALT]\n\tgas_used={d}\n", .{  self.gas });
+                print("[HALT]\n\tgas_remaining={d}\n", .{ self.gas });
             }
 
             print("{s:=^60}\n", .{" EVM execute "});
+            // TODO: Print a [CONTEXT] section with gas limit at start.
 
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
-            // self.gas += fee_table.get(.transaction);
-            self.gas += getFee(.transaction);
+            // self.gas += getFee(.transaction);
+            self.gas -= try consumeGas(self, .transaction);
 
             // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
             // print("rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
