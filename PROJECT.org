@@ -1,4 +1,10 @@
-#+TITLE: zevem project information
+#+TODO: TODO(t@) BLOCK(b@) | DONE(d!)
+#+STARTUP: indent logdone logdrawer content
+# ------------------------------------------------------
+#+TITLE: Project Planning: zevem
+#+AUTHOR: Jordan Ellis Coppard
+#+LANGUAGE: en
+#+OPTIONS: ^:{}
 
 * Zevem
 
@@ -555,11 +561,29 @@ https://ziglang.org/download/0.14.0/release-notes.html#UBSan-Runtime
 Maybe (if things like tracy or valgrind for whatever reason aren't good enough, which I doubt) how UBSan modifies things at compile time could be an approach for instrumentation etc etc. Again, doubt it since tracy/valgrind.
 
 * Misc TODOs
-:PROPERTIES:
-:visibility: outline
+
+** TODO Look at using the Writer API style for things like output
+:LOGBOOK:
+- State "TODO"       from              [2025-08-12 Tue 19:11]
 :END:
 
-** TODO Unbreak CI from types changes in commit: 3375a031342a3b19e80dc25b66ceeacb1827b7fc 
+Can have a reader/writer and write into it (doesn't have to be stdout) but any data structure I think. This could be a nice pattern to investigate using later.
+
+** TODO Scoped logging, custom logger
+:LOGBOOK:
+- State "TODO"       from              [2025-08-12 Tue 19:42]
+:END:
+
+See test runners for an example API with the writing and in terms of logging scope the following resources:
+- https://ziglang.org/documentation/0.14.1/#Standard-Library-Options
+- https://ziglang.org/documentation/0.14.1/std/#std.log.scoped
+- https://gist.github.com/kassane/a81d1ae2fa2e8c656b91afee8b949426
+
+** DONE Unbreak CI from types changes in commit: 3375a031342a3b19e80dc25b66ceeacb1827b7fc
+CLOSED: [2025-08-12 Tue 19:12]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2025-08-12 Tue 19:12]
+:END:
 ** TODO Update to Zig 0.14.1
 ** TODO Would keccak_p.zig benefit from the labelled switch api changes?
 See: https://ziglang.org/documentation/master/std/#src/std/crypto/keccak_p.zig

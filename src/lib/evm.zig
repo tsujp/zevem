@@ -182,6 +182,12 @@ pub fn New(comptime Environment: type) type {
             const zone = tracy.initZone(@src(), .{ .name = "EVM execute" });
             defer zone.deinit();
 
+            // Print execution information at terminal halting state.
+            defer {
+                // TODO: return data, stack size, pc (although pc implied from bytecode output)
+                print("[HALT]\n\tgas_used={d}\n", .{  self.gas });
+            }
+
             print("{s:=^60}\n", .{" EVM execute "});
 
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
