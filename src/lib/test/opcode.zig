@@ -671,20 +671,17 @@ test "basic RETURN" {
     }
 }
 
+const Sut = util.Sut;
 test "basic REVERT" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then revert.
-    var dummyEnv: DummyEnv = .default;
+    var sut: Sut = try .init(.{});
+    defer sut.deinit();
 
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-    const allocator = gpa.allocator();
-
-    var evm = try EVM.init(allocator, &dummyEnv);
-    const err = evm.execute(&util.htb("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fffd"));
-    try expect(err == error.Revert);
-    // try expect(evm == error.Revert);
-    try expect(evm.return_data.len == 32);
-    for (evm.return_data) |i| {
-        try expect(i == 0xff);
+    const res = sut.executeBasic("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fffd");
+    try expectError(error.Revert, res);
+    try expectEqual(sut.evm.return_data.len, 32);
+    for (sut.evm.return_data) |i| {
+        try expectEqual(i, 0xff);
     }
 }
 

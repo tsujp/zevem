@@ -206,9 +206,10 @@ pub fn New(comptime Environment: type) type {
             print("{s:=^60}\n", .{" EVM execute "});
             // TODO: Print a [CONTEXT] section with gas limit at start.
 
+            self.gas = tx.gas;
+
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
             if (tx.gas < getFee(.transaction)) return EvmError.OutOfGas;
-            self.gas = tx.gas;
 
             self.gas -= try consumeGas(self, .transaction); // g_0 deduction (TODO: The rest per figure 64).
 
