@@ -16,3 +16,6 @@ pub const Bytes32 = [32]u8;
 
 /// Blocks.
 pub const BlockHeader = @import("types/BlockHeader.zig");
+
+/// Transactions.
+pub const Transaction = @import("types/Transaction.zig");

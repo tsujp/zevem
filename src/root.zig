@@ -16,10 +16,11 @@ test {
 
 pub const EVM = evm.New(DummyEnv);
 
+const Transaction = @import("lib/types.zig").Transaction;
 pub const util = struct {
     // TODO: Place elsewhere, idk.
     // Inspired by: https://github.com/jsign/phant/blob/18eeadffd24de9c6b3ae5c7505ada52c43f2b1d4/src/common/hexutils.zig#L73
-    pub inline fn htb(comptime bytes: []const u8) [bytes.len / 2]u8 {
+    pub fn htb(comptime bytes: []const u8) [bytes.len / 2]u8 {
         comptime var buf: [bytes.len / 2]u8 = undefined;
         _ = comptime std.fmt.hexToBytes(&buf, bytes) catch @compileError("htb hex to bytes error");
         return buf;
@@ -37,5 +38,13 @@ pub const util = struct {
         try evm_dummy.execute(&htb(bytes));
 
         return evm_dummy;
+    }
+
+    // Dumb convenience function to automatically call htb on data.
+    pub fn testTx(comptime tx: Transaction) Transaction {
+        var new_tx = tx;
+        new_tx.data = &htb(tx.data);
+
+        return new_tx;
     }
 };

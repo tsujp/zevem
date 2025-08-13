@@ -16,6 +16,8 @@ const fee_table = @import("op.zig").fee_table;
 
 const MAX_STACK_DEPTH = 1024;
 
+const Transaction = types.Transaction;
+
 const Word = types.Word;
 const DoubleWord = types.DoubleWord;
 const SignedWord = types.SignedWord;
@@ -118,8 +120,7 @@ pub fn New(comptime Environment: type) type {
             return Self{
                 .alloc = alloc,
                 .pc = 0,
-                // TODO: Do we want/need a MessageCall struct yet? I think so but for now one can set the gas limit before execution by assigning to .gas on the returned EVM struct.
-                .gas = 21_000, // Default just enough to cover G_transaction.
+                .gas = 0, // Set by Transaction (T_g) at execution time.
                 .stack = try std.BoundedArray(Word, MAX_STACK_DEPTH).init(0),
                 .env = env,
                 .mem = .empty,
@@ -137,6 +138,8 @@ pub fn New(comptime Environment: type) type {
 
             // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
             // print("nextOp: rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
+
+            // self.gas -= try consumeGas(self, .transaction);
 
             // Attempt to access beyond the end of bytecode is a STOP (op 0x00) per spec.
             const raw_bytecode = if (self.pc >= rom.len) return OpCode.STOP else rom[self.pc];
@@ -190,7 +193,7 @@ pub fn New(comptime Environment: type) type {
             return fee;
         }
 
-        pub fn execute(self: *Self, rom: []const u8) !void {
+        pub fn execute(self: *Self, tx: Transaction) !void {
             const zone = tracy.initZone(@src(), .{ .name = "EVM execute" });
             defer zone.deinit();
 
@@ -204,8 +207,13 @@ pub fn New(comptime Environment: type) type {
             // TODO: Print a [CONTEXT] section with gas limit at start.
 
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
-            // self.gas += getFee(.transaction);
-            self.gas -= try consumeGas(self, .transaction);
+            if (tx.gas < getFee(.transaction)) return EvmError.OutOfGas;
+            self.gas = tx.gas;
+
+            self.gas -= try consumeGas(self, .transaction); // g_0 deduction (TODO: The rest per figure 64).
+
+            // TODO: Hack for now, I imagine 'Transaction' type will change soon.
+            const rom = tx.data;
 
             // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
             // print("rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
