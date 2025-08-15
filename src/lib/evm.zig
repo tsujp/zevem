@@ -173,6 +173,9 @@ pub fn New(comptime Environment: type) type {
                 return Exception.StackOverflow;
             }
 
+            // Consume required static gas.
+            self.gas -= try consumeGas(self, opinfo.fee.constant);
+
             return opcode;
         }
 
@@ -212,7 +215,7 @@ pub fn New(comptime Environment: type) type {
             // Print execution information at terminal halting state.
             defer {
                 // TODO: return data, stack size, pc (although pc implied from bytecode output)
-                print("[HALT]\n\tgas_remaining={d}\n", .{self.gas});
+                print("[HALT]\n\tgas_remaining={d}\n\tgas_consumed={d}\n", .{self.gas, tx.gas - self.gas});
             }
 
             print("{s:=^60}\n", .{" EVM execute "});
