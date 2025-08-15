@@ -19,10 +19,13 @@ jobs:
         - name: Setup Zig
           uses: mlugg/setup-zig@v1
           with:
-              version: 0.14.0
+              version: 0.14.1
 
         - name: Test in debug mode
           run: zig build test --summary all
 
         - name: Test in release-fast mode
           run: zig build test --summary all --release=fast
+
+        - name: Test in release-safe mode
+          run: zig build test --summary all --release=safe

@@ -15,52 +15,46 @@ const EVM = zevem.EVM;
 // XXX: I don't know if it's (easy) to make this generic over any environment, so only
 //      DummyEnv for now.
 pub const Sut = struct {
-    // Need to hold these in (this) wrapping struct so they aren't destroyed...
-    gpa: std.heap.DebugAllocator(.{}),
-    env: DummyEnv,
-    // ...because evm requires them.
+    const Self = @This();
+
+    // Need to hold ptr to environment in wrapping struct for lifetime access...
+    env: *DummyEnv,
+    // ...required by evm.
     evm: evm.New(DummyEnv),
 
-    pub fn init(comptime args: struct {
+    pub fn init(args: struct {
         env: DummyEnv = .default,
-        gpa: std.heap.DebugAllocator(.{}) = .init,
-    }) !Sut {
+    }) !Self {
         if (!builtin.is_test) @compileError("this function is for use in tests only");
 
-        // Copy arg fields (TODO: struct destructure instead..?)
-        var gpa = args.gpa;
-        var env = args.env;
+        // Allocate env on heap otherwise it'll be a dangling pointer.
+        const ptr = try std.testing.allocator.create(DummyEnv);
+        ptr.* = args.env;
 
-        // const evm_sut = try evm.New(env_copy).init(
-        const evm_sut = try evm.New(DummyEnv).init(
-            gpa.allocator(),
-            &env,
-        );
-
-        return Sut{
-            .gpa = gpa, // To stop it being destroyed once init out of scope.
-            .env = env, // Ditto.
-            .evm = evm_sut,
+        const soot = Self{
+            .env = ptr,
+            .evm = try evm.New(DummyEnv).init(std.testing.allocator, ptr),
         };
+
+        return soot;
     }
 
-    pub fn deinit(self: *Sut) void {
-        if (self.gpa.deinit() == .leak) {
-            @panic("TEST MEMORY LEAK");
-        }
+    pub fn deinit(self: *Self) void {
+        self.evm.deinit();
+        std.testing.allocator.destroy(self.env);
     }
 
     // Caller can provide bytecode as string, and can avoid use of `try` and still get the
     //   execution result or the expected error.
-    pub fn executeBasic(self: *Sut, comptime bytes: []const u8) !void {
+    pub fn executeBasic(self: *Self, comptime bytes: []const u8) !void {
         if (!builtin.is_test) @compileError("this function is for use in tests only");
 
-        const res = try self.evm.execute(.{
+        const txx = Transaction{
             .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
             .data = &htb(bytes),
-        });
+        };
 
-        return res;
+        try self.evm.execute(txx);
     }
 };
 
@@ -87,7 +81,9 @@ pub fn tx(comptime base_tx: Transaction) Transaction {
     if (!builtin.is_test) @compileError("this function is for use in tests only");
 
     var new_tx = base_tx;
-    new_tx.data = &htb(base_tx.data);
+
+    // Force inline copy at compile-time.
+    new_tx.data = comptime &htb(base_tx.data);
 
     return new_tx;
 }

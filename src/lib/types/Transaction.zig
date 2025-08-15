@@ -25,10 +25,10 @@ data: []const u8,
 // pub fn init(comptime base: Transaction) Transaction {
 //     const ArgsType = @TypeOf(base);
 //     const args_type_info = @typeInfo(ArgsType);
-    
+
 //     // @compileLog("TYPE:", ArgsType);
 //     // @compileLog("INFO:", args_type_info);
-    
+
 //     return .{
 //         .gas = 21_000,
 //         .data = "",

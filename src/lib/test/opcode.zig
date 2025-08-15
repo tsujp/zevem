@@ -520,11 +520,13 @@ test "basic SAR" {
 }
 
 test "basic KECCAK256" {
-    // TODO:
+    // TODO
+    return error.SkipZigTest;
 }
 
 test "basic BALANCE" {
-    // TODO:
+    // TODO
+    return error.SkipZigTest;
 }
 
 // TODO: Change blockheader things back to functions and so update this test accordingly.
@@ -612,6 +614,7 @@ test "basic MSTORE" {
 
 test "basic JUMPDEST" {
     // TODO
+    return error.SkipZigTest;
 }
 
 // TODO: Add super, super basic tests for PUSH0 .. PUSH32. Basically just one scenario per PUSHN because they are used in essentially every other test.
@@ -657,9 +660,8 @@ test "basic DUP" {
 }
 
 test "basic SWAP" {
-    try expectEqual(true, true);
-
     // TODO
+    return error.SkipZigTest;
 }
 
 test "basic RETURN" {
@@ -678,10 +680,10 @@ test "basic REVERT" {
     defer sut.deinit();
 
     const res = sut.executeBasic("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fffd");
-    try expectError(error.Revert, res);
-    try expectEqual(sut.evm.return_data.len, 32);
+    try expectError(Exception.Revert, res);
+    try expectEqual(32, sut.evm.return_data.len);
     for (sut.evm.return_data) |i| {
-        try expectEqual(i, 0xff);
+        try expectEqual(0xff, i);
     }
 }
 

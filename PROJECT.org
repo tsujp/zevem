@@ -657,6 +657,15 @@ Problem is when you want to do a lot of shell-stuff Just executes each line of t
 
 Haven't looked into fuzzing approaches yet; just found this while browsing other Zig things and it could be beneficial later: https://github.com/AFLplusplus/AFLplusplus and for Zig: https://github.com/kristoff-it/zig-afl-kit?tab=readme-ov-file
 
+** TODO Ziggy on-disk test cases for bytecode and what not
+:LOGBOOK:
+- State "TODO"       from              [2025-08-15 Fri 16:50]
+:END:
+
+Instead of evmBasicBytecode or most manual literal tests in source, perhaps replace them with test files on-disk which are read to execute EVM instructions and then the unit test in Zig code is about asserting expected values.
+
+This feels like more of an experiment since the value in doing so is perhaps dubious versus in-source tests. Have to investigate. Not very important.
+
 ** Old project-todo.org file contents dumped within
 :PROPERTIES:
 :VISIBILITY: folded

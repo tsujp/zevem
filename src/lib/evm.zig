@@ -62,6 +62,11 @@ pub const Exception = error{
     InvalidOp,
     Revert,
     OutOfGas,
+    // XXX: Following are just to shut Zig up for now.
+    Overflow, // For: try self.stack.append(self.stack.pop().? +% self.stack.pop().?);
+    NotImplemented,
+    MemResizeUInt256Overflow,
+    OutOfMemory, // For: try self.mem.resize(self.alloc, memsize_usize);
 };
 
 // TODO: Output test binary so I can run poop on that.
@@ -130,6 +135,11 @@ pub fn New(comptime Environment: type) type {
             };
         }
 
+        pub fn deinit(self: *Self) void {
+            self.mem.deinit(self.alloc);
+            self.alloc.free(self.return_data);
+        }
+
         // TODO: Explicit inline keyword or let compiler decide?
         fn nextOp(self: *Self, rom: []const u8) !OpCode {
             // XXX: Validating the stack items here (might) be inefficient as not every opcode requires it (i.e. profile the actual impact) however it is simpler which is better for now (getting zevem working in the first place).
@@ -152,7 +162,7 @@ pub fn New(comptime Environment: type) type {
             const opinfo = op_table[raw_bytecode];
 
             // TODO: Conditionally only execute traceOp if this is a debug build, or has a build argument (e.g. with-tracing or something).
-            traceOp(opcode, self.pc, .endln);
+            // traceOp(opcode, self.pc, .endln);
 
             // Validate stack requirements.
             // TODO: Explicit error set with payload information?
@@ -195,14 +205,14 @@ pub fn New(comptime Environment: type) type {
             return fee;
         }
 
-        pub fn execute(self: *Self, tx: Transaction) !void {
+        pub fn execute(self: *Self, tx: Transaction) Exception!void {
             const zone = tracy.initZone(@src(), .{ .name = "EVM execute" });
             defer zone.deinit();
 
             // Print execution information at terminal halting state.
             defer {
                 // TODO: return data, stack size, pc (although pc implied from bytecode output)
-                print("[HALT]\n\tgas_remaining={d}\n", .{ self.gas });
+                print("[HALT]\n\tgas_remaining={d}\n", .{self.gas});
             }
 
             print("{s:=^60}\n", .{" EVM execute "});
@@ -834,7 +844,7 @@ pub fn New(comptime Environment: type) type {
                         @memcpy(self.return_data[0..], self.mem.items[@truncate(offset)..end]);
                     }
 
-                    if (op == .REVERT) return error.Revert;
+                    if (op == .REVERT) return Exception.Revert;
                     // if (op == .REVERT) return EvmError.Revert;
 
                     return;

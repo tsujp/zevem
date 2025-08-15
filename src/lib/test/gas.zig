@@ -23,7 +23,10 @@ test "basic OutOfGas" {
     var sut: Sut = try .init(.{});
     defer sut.deinit();
 
-    const res = sut.evm.execute(tx(.{ .gas = 123, .data = "0100", }));
+    const res = sut.evm.execute(tx(.{
+        .gas = 123,
+        .data = "0100",
+    }));
 
     try expectError(Exception.OutOfGas, res);
     try expectEqual(123, sut.evm.gas); // Gas same as input (nothing done). [TODO: Is this correct or does it go to 0 etc etc]
@@ -35,7 +38,10 @@ test "basic consumption" {
     var sut: Sut = try .init(.{});
     defer sut.deinit();
 
-    const res = sut.evm.execute(tx(.{ .gas = 21_000, .data = "00", }));
+    const res = sut.evm.execute(tx(.{
+        .gas = 21_000,
+        .data = "00",
+    }));
 
     try expectEqual(0, sut.evm.gas); // All gas consumed until zero (which is NOT an error).
     try expectEqual({}, res); // No error.
@@ -44,7 +50,8 @@ test "basic consumption" {
 
 // Opcodes which have constant gas pricing.
 test "constant pricing" {
-    
+    // TODO
+    return error.SkipZigTest;
 }
 
 // TODO: Dynamic gas pricing.
