@@ -6,7 +6,8 @@ const native_endian = builtin.cpu.arch.endian();
 // TODO: FalsePattern's zig-tracy no-ops its functions if we don't enable it, but also check our own usage is no-op'd when not in-use.
 const tracy = @import("tracy");
 
-const types = @import("types.zig");
+pub const types = @import("types.zig");
+const Transaction = types.Transaction;
 
 const OpCode = @import("op.zig").Enum;
 const op_table = @import("op.zig").table;
@@ -15,8 +16,6 @@ const Fee = @import("op.zig").Fee;
 const fee_table = @import("op.zig").fee_table;
 
 const MAX_STACK_DEPTH = 1024;
-
-const Transaction = types.Transaction;
 
 const Word = types.Word;
 const DoubleWord = types.DoubleWord;
@@ -57,7 +56,10 @@ fn traceStackTake() void {}
 
 // TODO [2025/08/12]: I had something planned in the past with errors and them having some
 //   contextual values (e.g. associated data) but cannot remember right now.
-pub const EvmError = error{
+pub const Exception = error{
+    StackUnderflow,
+    StackOverflow,
+    InvalidOp,
     Revert,
     OutOfGas,
 };
@@ -146,7 +148,7 @@ pub fn New(comptime Environment: type) type {
 
             defer self.pc += 1;
 
-            const opcode = std.meta.intToEnum(OpCode, raw_bytecode) catch return error.InvalidOpCode;
+            const opcode = std.meta.intToEnum(OpCode, raw_bytecode) catch return Exception.InvalidOp;
             const opinfo = op_table[raw_bytecode];
 
             // TODO: Conditionally only execute traceOp if this is a debug build, or has a build argument (e.g. with-tracing or something).
@@ -154,11 +156,11 @@ pub fn New(comptime Environment: type) type {
 
             // Validate stack requirements.
             // TODO: Explicit error set with payload information?
-            if (self.stack.len < opinfo.delta) return error.StackUnderflow;
+            if (self.stack.len < opinfo.delta) return Exception.StackUnderflow;
             if (MAX_STACK_DEPTH < (self.stack.len - opinfo.delta + opinfo.alpha)) {
                 std.debug.print("stackOverflow: stack_len={d}, op_delta={d}, op_alpha={d}\n", .{ self.stack.len, opinfo.delta, opinfo.alpha });
 
-                return error.StackOverflow;
+                return Exception.StackOverflow;
             }
 
             return opcode;
@@ -189,7 +191,7 @@ pub fn New(comptime Environment: type) type {
         //      compute the optimisation itself? Benchmark/optimise.
         inline fn consumeGas(self: *Self, name: Fee) !u64 {
             const fee = getFee(name);
-            if (fee > self.gas) return EvmError.OutOfGas;
+            if (fee > self.gas) return Exception.OutOfGas;
             return fee;
         }
 
@@ -209,7 +211,7 @@ pub fn New(comptime Environment: type) type {
             self.gas = tx.gas;
 
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
-            if (tx.gas < getFee(.transaction)) return EvmError.OutOfGas;
+            if (tx.gas < getFee(.transaction)) return Exception.OutOfGas;
 
             self.gas -= try consumeGas(self, .transaction); // g_0 deduction (TODO: The rest per figure 64).
 

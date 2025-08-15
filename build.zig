@@ -36,8 +36,18 @@ pub fn build(b: *std.Build) !void {
         // .test_runner = .{ .path = b.path("src/test_runner_3.zig"), .mode = .simple },
     });
 
+    // XXX: Do we "double compile" (zevem) again this way? Feels nice to separate the test utilities
+    //      into their own module but maybe it's overkill.
+    const test_utils_mod = b.addModule("test_utils", .{
+        .root_source_file = b.path("src/lib/test_utils.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    test_utils_mod.addImport("zevem", lib_mod);
+
     // Add lib_mod to itself (lib_mod) as an importable module called "zevem" so that in test files we can simply `@import("zevem")` instead of having to `@import("../../zevem.zig");` which would depend on the location of the test file in-question.
     lib_mod.addImport("zevem", lib_mod);
+    lib_mod.addImport("test_utils", test_utils_mod);
 
     const test_step = b.step("test", "Unit test zevem");
     const run_test_cmd = b.addRunArtifact(lib_test);

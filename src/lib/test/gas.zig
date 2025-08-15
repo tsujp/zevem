@@ -1,19 +1,20 @@
+//! Gas execution testing.
+
 const std = @import("std");
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectError = std.testing.expectError;
 
 const zevem = @import("zevem");
-const util = zevem.util;
+const utils = zevem.utils;
 const EVM = zevem.EVM;
-const Sut = util.Sut;
+const Exception = zevem.evm.Exception;
+const DummyEnv = zevem.DummyEnv;
 
-const basicBytecode = util.evmBasicBytecode;
-const tx = util.testTx;
-
-const EvmError = @import("../evm.zig").EvmError;
-
-const DummyEnv = @import("../DummyEnv.zig");
+const test_utils = @import("test_utils");
+const Sut = test_utils.Sut;
+const basicBytecode = test_utils.evmBasicBytecode;
+const tx = test_utils.tx;
 
 test "basic OutOfGas" {
     // Attempt to execute a transcation whose T_g (gas limit) is less than the g_0 (intrinsic
@@ -24,7 +25,7 @@ test "basic OutOfGas" {
 
     const res = sut.evm.execute(tx(.{ .gas = 123, .data = "0100", }));
 
-    try expectError(EvmError.OutOfGas, res);
+    try expectError(Exception.OutOfGas, res);
     try expectEqual(123, sut.evm.gas); // Gas same as input (nothing done). [TODO: Is this correct or does it go to 0 etc etc]
 }
 
