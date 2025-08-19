@@ -17,9 +17,15 @@ pub const fee_table = fee_map;
 const OPCODE_SIZE = u8;
 const MAX_OPCODE_COUNT: comptime_int = std.math.maxInt(OPCODE_SIZE) + 1;
 
-const GasCost = struct {
+const GasCostTag = enum {
+    constant,
+    dynamic,
+};
+
+// TODO: Yet to see any ops which have both constant and dynamic, if/when then this needs changing.
+pub const GasCost = union(GasCostTag) {
     constant: FeeSchedule,
-    // TODO: Dynamic.
+    dynamic: *const fn (self: *EVM) u64,
 };
 
 // Instructions can have constant gas prices associated with them and/or dynamic gas prices associated with them.
@@ -149,7 +155,7 @@ const OpCodes = MakeOpCodes(.{
     .{ .SMOD, .{}, .low, 2, 1 }, // Signed modulo remainder.
     .{ .ADDMOD, .{}, .mid, 3, 1 }, // Modulo addition.
     .{ .MULMOD, .{}, .mid, 3, 1 }, // Modulo multiplication.
-    .{ .EXP, .{}, .TODO_CUSTOM_FEE, 2, 1 }, // Exponential.
+    .{ .EXP, .{}, gasEXP, 2, 1 }, // Exponential.
     //
     .{ .SIGNEXTEND, .{}, .low, 2, 1 }, // Extend length of two's complement signed integer.
 
@@ -303,8 +309,17 @@ fn makeOpInfo(comptime args: anytype, comptime override: ?struct { ?comptime_int
         };
     };
 
+    // @compileLog("ARG 2 INFO:", @TypeOf(args[2]));
+    // @compileLog("ARG 2 INFO 2:", @typeInfo(@TypeOf(args[2])));
+
     return .{
-        .fee = .{ .constant = args[2] },
+        // .fee = .{ .constant = args[2] },
+        // TODO: Possible to only return the inner .constant or .dynamic? Just curious.
+        .fee = switch (@typeInfo(@TypeOf(args[2]))) {
+            .enum_literal => GasCost{ .constant = args[2] },
+            .@"fn" => GasCost{ .dynamic = args[2] },
+            else => @compileError("expected fee tag or dynamic gas cost function, got " ++ @typeInfo(@TypeOf(args[2]))),
+        },
         .delta = d_final,
         .alpha = a_final,
     };
@@ -410,3 +425,24 @@ fn MakeOpCodes(comptime args: anytype) struct { Enum: type, table: [MAX_OPCODE_C
 //     .STOP = .{ .fee = .zero, .delta =  0, .alpha =  0},
 //     .ADD = .{ .fee = .zero, .delta = 0, .alpha = 0},
 // });
+
+const evm = @import("evm.zig");
+const DummyEnv = @import("DummyEnv.zig");
+const EVM = evm.New(DummyEnv);
+
+fn gasEXP(self: *EVM) u64 {
+    // TODO: What happens if there's nothing at the index though? Model this after `.pop` on BoundedArray? Or custom data structure later?
+    const exponent = self.stack.get(self.stack.len - 2);
+
+    const base_fee = fee_table.get(.exp).?;
+
+    // TODO: Optimise this to be branchless
+    const fee = switch (exponent) {
+        0 => base_fee,
+        else => {
+            return base_fee + (fee_table.get(.expbyte).? * ((256 - @clz(exponent) + 7) / 8));
+        },
+    };
+
+    return fee;
+}

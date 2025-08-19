@@ -14,6 +14,7 @@ const op_table = @import("op.zig").table;
 
 const Fee = @import("op.zig").Fee;
 const fee_table = @import("op.zig").fee_table;
+const GasCost = @import("op.zig").GasCost;
 
 const MAX_STACK_DEPTH = 1024;
 
@@ -173,8 +174,8 @@ pub fn New(comptime Environment: type) type {
                 return Exception.StackOverflow;
             }
 
-            // Consume required static gas.
-            self.gas -= try consumeGas(self, opinfo.fee.constant);
+            // Consume required gas.
+            self.gas -= try consumeGas(self, opinfo.fee);
 
             return opcode;
         }
@@ -183,8 +184,12 @@ pub fn New(comptime Environment: type) type {
 
         // TODO: Have these as a comptime function which will inline flip the sign instead?
 
-        inline fn getFee(name: Fee) u64 {
-            return @intCast(fee_table.get(name).?);
+        // TODO: Should not require 'self' param, just a quick hack.
+        inline fn getFee(self: *Self, cost: GasCost) u64 {
+            return switch (cost) {
+                .constant => |c| @intCast(fee_table.get(c).?),
+                .dynamic => |d| d(self),
+            };
         }
 
         inline fn asSignedWord(value: Word) SignedWord {
@@ -202,8 +207,8 @@ pub fn New(comptime Environment: type) type {
 
         // XXX: Here and above inline functions, remove the `inline` keyword so the compiler can
         //      compute the optimisation itself? Benchmark/optimise.
-        inline fn consumeGas(self: *Self, name: Fee) !u64 {
-            const fee = getFee(name);
+        inline fn consumeGas(self: *Self, cost: GasCost) !u64 {
+            const fee = getFee(self, cost);
             if (fee > self.gas) return Exception.OutOfGas;
             return fee;
         }
@@ -215,7 +220,7 @@ pub fn New(comptime Environment: type) type {
             // Print execution information at terminal halting state.
             defer {
                 // TODO: return data, stack size, pc (although pc implied from bytecode output)
-                print("[HALT]\n\tgas_remaining={d}\n\tgas_consumed={d}\n", .{self.gas, tx.gas - self.gas});
+                print("[HALT]\n\tgas_remaining={d}\n\tgas_consumed={d}\n", .{ self.gas, tx.gas - self.gas });
             }
 
             print("{s:=^60}\n", .{" EVM execute "});
@@ -224,9 +229,9 @@ pub fn New(comptime Environment: type) type {
             self.gas = tx.gas;
 
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
-            if (tx.gas < getFee(.transaction)) return Exception.OutOfGas;
+            if (tx.gas < getFee(self, .{ .constant = .transaction })) return Exception.OutOfGas;
 
-            self.gas -= try consumeGas(self, .transaction); // g_0 deduction (TODO: The rest per figure 64).
+            self.gas -= try consumeGas(self, .{ .constant = .transaction }); // g_0 deduction (TODO: The rest per figure 64).
 
             // TODO: Hack for now, I imagine 'Transaction' type will change soon.
             const rom = tx.data;
