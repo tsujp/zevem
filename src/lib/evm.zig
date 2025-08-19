@@ -184,12 +184,13 @@ pub fn New(comptime Environment: type) type {
 
         // TODO: Have these as a comptime function which will inline flip the sign instead?
 
-        // TODO: Should not require 'self' param, just a quick hack.
-        inline fn getFee(self: *Self, cost: GasCost) u64 {
-            return switch (cost) {
-                .constant => |c| @intCast(fee_table.get(c).?),
-                .dynamic => |d| d(self),
-            };
+        inline fn getFee(fee: Fee) u64 {
+            // TODO: fee_table on the anon EVM struct so it's dynamic pricing per instance?
+            return @intCast(fee_table.get(fee).?);
+        }
+
+        fn getCost(self: *Self, cost: GasCost) u64 {
+            return if (cost.dynamic) |dfn| dfn(self) else 0;
         }
 
         inline fn asSignedWord(value: Word) SignedWord {
@@ -208,7 +209,8 @@ pub fn New(comptime Environment: type) type {
         // XXX: Here and above inline functions, remove the `inline` keyword so the compiler can
         //      compute the optimisation itself? Benchmark/optimise.
         inline fn consumeGas(self: *Self, cost: GasCost) !u64 {
-            const fee = getFee(self, cost);
+            var fee = getFee(cost.constant);
+            fee += getCost(self, cost);
             if (fee > self.gas) return Exception.OutOfGas;
             return fee;
         }
@@ -229,9 +231,9 @@ pub fn New(comptime Environment: type) type {
             self.gas = tx.gas;
 
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
-            if (tx.gas < getFee(self, .{ .constant = .transaction })) return Exception.OutOfGas;
+            if (tx.gas < getFee(.transaction)) return Exception.OutOfGas;
 
-            self.gas -= try consumeGas(self, .{ .constant = .transaction }); // g_0 deduction (TODO: The rest per figure 64).
+            self.gas -= try consumeGas(self, .{ .constant = .transaction, .dynamic = null }); // g_0 deduction (TODO: The rest per figure 64).
 
             // TODO: Hack for now, I imagine 'Transaction' type will change soon.
             const rom = tx.data;
@@ -716,7 +718,7 @@ pub fn New(comptime Environment: type) type {
                     const offset = self.stack.pop().?;
                     const value = self.stack.pop().?;
 
-                    // resize memory if need be
+                    // Resize memory if need be.
                     // NOTE: this should incur some extra gas cost
                     const sum_and_overflow = @addWithOverflow(offset, 32);
                     if (sum_and_overflow[1] == 1) {

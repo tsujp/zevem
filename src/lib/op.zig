@@ -17,15 +17,9 @@ pub const fee_table = fee_map;
 const OPCODE_SIZE = u8;
 const MAX_OPCODE_COUNT: comptime_int = std.math.maxInt(OPCODE_SIZE) + 1;
 
-const GasCostTag = enum {
-    constant,
-    dynamic,
-};
-
-// TODO: Yet to see any ops which have both constant and dynamic, if/when then this needs changing.
-pub const GasCost = union(GasCostTag) {
+pub const GasCost = struct {
     constant: FeeSchedule,
-    dynamic: *const fn (self: *EVM) u64,
+    dynamic: ?*const fn (self: *EVM) u64,
 };
 
 // Instructions can have constant gas prices associated with them and/or dynamic gas prices associated with them.
@@ -143,21 +137,21 @@ const OpCodes = MakeOpCodes(.{
 
     // //////////////////////////////////////////
     // /////// 0s: Stop and Arithmetic Operations
-    .{ .STOP, .{0x00}, .zero, 0, 0 }, // Halt execution.
+    .{ .STOP, .{0x00}, .zero, null, 0, 0 }, // Halt execution.
 
     // Maths.
-    .{ .ADD, .{}, .verylow, 2, 1 }, // Addition.
-    .{ .MUL, .{}, .low, 2, 1 }, // Multiplication.
-    .{ .SUB, .{}, .verylow, 2, 1 }, // Subtraction.
-    .{ .DIV, .{}, .low, 2, 1 }, // Integer division.
-    .{ .SDIV, .{}, .low, 2, 1 }, // Signed integer division (truncated).
-    .{ .MOD, .{}, .low, 2, 1 }, // Modulo remainder.
-    .{ .SMOD, .{}, .low, 2, 1 }, // Signed modulo remainder.
-    .{ .ADDMOD, .{}, .mid, 3, 1 }, // Modulo addition.
-    .{ .MULMOD, .{}, .mid, 3, 1 }, // Modulo multiplication.
-    .{ .EXP, .{}, gasEXP, 2, 1 }, // Exponential.
+    .{ .ADD, .{}, .verylow, null, 2, 1 }, // Addition.
+    .{ .MUL, .{}, .low, null, 2, 1 }, // Multiplication.
+    .{ .SUB, .{}, .verylow, null, 2, 1 }, // Subtraction.
+    .{ .DIV, .{}, .low, null, 2, 1 }, // Integer division.
+    .{ .SDIV, .{}, .low, null, 2, 1 }, // Signed integer division (truncated).
+    .{ .MOD, .{}, .low, null, 2, 1 }, // Modulo remainder.
+    .{ .SMOD, .{}, .low, null, 2, 1 }, // Signed modulo remainder.
+    .{ .ADDMOD, .{}, .mid, null, 3, 1 }, // Modulo addition.
+    .{ .MULMOD, .{}, .mid, null, 3, 1 }, // Modulo multiplication.
+    .{ .EXP, .{}, .exp, gasEXP, 2, 1 }, // Exponential.
     //
-    .{ .SIGNEXTEND, .{}, .low, 2, 1 }, // Extend length of two's complement signed integer.
+    .{ .SIGNEXTEND, .{}, .low, null, 2, 1 }, // Extend length of two's complement signed integer.
 
     // UNUSED: 0x0C ... 0x0F
 
@@ -165,29 +159,29 @@ const OpCodes = MakeOpCodes(.{
     // /////// 10s: Comparison & Bitwise Logic Operations
 
     // Comparison.
-    .{ .LT, .{0x10}, .verylow, 2, 1 }, // Less than.
-    .{ .GT, .{}, .verylow, 2, 1 }, // Greater than.
-    .{ .SLT, .{}, .verylow, 2, 1 }, // Signed less than.
-    .{ .SGT, .{}, .verylow, 2, 1 }, // Signed greater than.
-    .{ .EQ, .{}, .verylow, 2, 1 }, // Equality.
-    .{ .ISZERO, .{}, .verylow, 1, 1 }, // Is zero.
+    .{ .LT, .{0x10}, .verylow, null, 2, 1 }, // Less than.
+    .{ .GT, .{}, .verylow, null, 2, 1 }, // Greater than.
+    .{ .SLT, .{}, .verylow, null, 2, 1 }, // Signed less than.
+    .{ .SGT, .{}, .verylow, null, 2, 1 }, // Signed greater than.
+    .{ .EQ, .{}, .verylow, null, 2, 1 }, // Equality.
+    .{ .ISZERO, .{}, .verylow, null, 1, 1 }, // Is zero.
     //
     // Bitwise.
-    .{ .AND, .{}, .verylow, 2, 1 }, // AND.
-    .{ .OR, .{}, .verylow, 2, 1 }, // OR.
-    .{ .XOR, .{}, .verylow, 2, 1 }, // XOR.
-    .{ .NOT, .{}, .verylow, 1, 1 }, // NOT.
+    .{ .AND, .{}, .verylow, null, 2, 1 }, // AND.
+    .{ .OR, .{}, .verylow, null, 2, 1 }, // OR.
+    .{ .XOR, .{}, .verylow, null, 2, 1 }, // XOR.
+    .{ .NOT, .{}, .verylow, null, 1, 1 }, // NOT.
     //
-    .{ .BYTE, .{}, .verylow, 2, 1 }, // Retrieve single byte from word.
-    .{ .SHL, .{}, .verylow, 2, 1 }, // Left-shift (TODO: What kind, bitwise?)
-    .{ .SHR, .{}, .verylow, 2, 1 }, // Logical right-shift.
-    .{ .SAR, .{}, .verylow, 2, 1 }, // Arithmetic signed right-shift.
+    .{ .BYTE, .{}, .verylow, null, 2, 1 }, // Retrieve single byte from word.
+    .{ .SHL, .{}, .verylow, null, 2, 1 }, // Left-shift (TODO: What kind, bitwise?)
+    .{ .SHR, .{}, .verylow, null, 2, 1 }, // Logical right-shift.
+    .{ .SAR, .{}, .verylow, null, 2, 1 }, // Arithmetic signed right-shift.
 
     // UNUSED: 0x1E ... 0x1F
 
     // //////////////////////////////////////////
     // /////// 20s: KECCAK256
-    .{ .KECCAK256, .{0x20}, .TODO_CUSTOM_FEE, 2, 1 }, // Compute KECCAK-256 hash.
+    .{ .KECCAK256, .{0x20}, .TODO_CUSTOM_FEE, null, 2, 1 }, // Compute KECCAK-256 hash.
 
     // UNUSED: 0x21 ... 0x2F
 
@@ -195,100 +189,100 @@ const OpCodes = MakeOpCodes(.{
     // /////// 30s: Environmental Information
 
     // Environment / get information.
-    .{ .ADDRESS, .{0x30}, .base, 0, 1 }, // Get address of currently executing account.
-    .{ .BALANCE, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get balance of account.
-    .{ .ORIGIN, .{}, .base, 0, 1 }, // Get execution of origination address.
-    .{ .CALLER, .{}, .base, 0, 1 }, // Get caller address.
-    .{ .CALLVALUE, .{}, .base, 0, 1 }, // Get deposited value via instruction/transaction responsible for current execution.
-    .{ .CALLDATALOAD, .{}, .verylow, 1, 1 }, // Get input data of current environment.
-    .{ .CALLDATASIZE, .{}, .base, 0, 1 }, // Get size of input data in current environment.
-    .{ .CALLDATACOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy input data in current environment to memory.
-    .{ .CODESIZE, .{}, .base, 0, 1 }, // Get size of code running in current environment.
-    .{ .CODECOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy code running in current environment to memory.
-    .{ .GASPRICE, .{}, .base, 0, 1 }, // Get gas price in current environment.
-    .{ .EXTCODESIZE, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get size of given account's code.
-    .{ .EXTCODECOPY, .{}, .TODO_CUSTOM_FEE, 4, 0 }, // Copy given account's code to memory.
-    .{ .RETURNDATASIZE, .{}, .base, 0, 1 }, // Get size of output data from previous call in current environment.
-    .{ .RETURNDATACOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy output data from previous call to memory.
-    .{ .EXTCODEHASH, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get hash of given account's code.
+    .{ .ADDRESS, .{0x30}, .base, null, 0, 1 }, // Get address of currently executing account.
+    .{ .BALANCE, .{}, .TODO_CUSTOM_FEE, null, 1, 1 }, // Get balance of account.
+    .{ .ORIGIN, .{}, .base, null, 0, 1 }, // Get execution of origination address.
+    .{ .CALLER, .{}, .base, null, 0, 1 }, // Get caller address.
+    .{ .CALLVALUE, .{}, .base, null, 0, 1 }, // Get deposited value via instruction/transaction responsible for current execution.
+    .{ .CALLDATALOAD, .{}, .verylow, null, 1, 1 }, // Get input data of current environment.
+    .{ .CALLDATASIZE, .{}, .base, null, 0, 1 }, // Get size of input data in current environment.
+    .{ .CALLDATACOPY, .{}, .TODO_CUSTOM_FEE, null, 3, 0 }, // Copy input data in current environment to memory.
+    .{ .CODESIZE, .{}, .base, null, 0, 1 }, // Get size of code running in current environment.
+    .{ .CODECOPY, .{}, .TODO_CUSTOM_FEE, null, 3, 0 }, // Copy code running in current environment to memory.
+    .{ .GASPRICE, .{}, .base, null, 0, 1 }, // Get gas price in current environment.
+    .{ .EXTCODESIZE, .{}, .TODO_CUSTOM_FEE, null, 1, 1 }, // Get size of given account's code.
+    .{ .EXTCODECOPY, .{}, .TODO_CUSTOM_FEE, null, 4, 0 }, // Copy given account's code to memory.
+    .{ .RETURNDATASIZE, .{}, .base, null, 0, 1 }, // Get size of output data from previous call in current environment.
+    .{ .RETURNDATACOPY, .{}, .TODO_CUSTOM_FEE, null, 3, 0 }, // Copy output data from previous call to memory.
+    .{ .EXTCODEHASH, .{}, .TODO_CUSTOM_FEE, null, 1, 1 }, // Get hash of given account's code.
 
     // //////////////////////////////////////////
     // /////// 40s: Block Information
-    .{ .BLOCKHASH, .{}, .blockhash, 1, 1 }, // Get hash of given complete block (within last 256).
-    .{ .COINBASE, .{}, .base, 0, 1 }, // Get block's beneficiary address.
-    .{ .TIMESTAMP, .{}, .base, 0, 1 }, // Get block's timestamp.
-    .{ .NUMBER, .{}, .base, 0, 1 }, // Get block's ordinal number.
-    .{ .PREVRANDAO, .{}, .base, 0, 1 }, // Get block's difficulty.
-    .{ .GASLIMIT, .{}, .base, 0, 1 }, // Get block's gas limit.
-    .{ .CHAINID, .{}, .base, 0, 1 }, // Get chain id.
-    .{ .SELFBALANCE, .{}, .low, 0, 1 }, // Get balance of currently executing account.
-    .{ .BASEFEE, .{}, .base, 0, 1 }, // Get base fee.
-    .{ .BLOBHASH, .{}, .TODO_CUSTOM_FEE, 1, 1 }, // Get versioned hashes.
-    .{ .BLOBBASEFEE, .{}, .TODO_CUSTOM_FEE, 0, 1 }, // Get block's blob base-fee.
+    .{ .BLOCKHASH, .{}, .blockhash, null, 1, 1 }, // Get hash of given complete block (within last 256).
+    .{ .COINBASE, .{}, .base, null, 0, 1 }, // Get block's beneficiary address.
+    .{ .TIMESTAMP, .{}, .base, null, 0, 1 }, // Get block's timestamp.
+    .{ .NUMBER, .{}, .base, null, 0, 1 }, // Get block's ordinal number.
+    .{ .PREVRANDAO, .{}, .base, null, 0, 1 }, // Get block's difficulty.
+    .{ .GASLIMIT, .{}, .base, null, 0, 1 }, // Get block's gas limit.
+    .{ .CHAINID, .{}, .base, null, 0, 1 }, // Get chain id.
+    .{ .SELFBALANCE, .{}, .low, null, 0, 1 }, // Get balance of currently executing account.
+    .{ .BASEFEE, .{}, .base, null, 0, 1 }, // Get base fee.
+    .{ .BLOBHASH, .{}, .TODO_CUSTOM_FEE, null, 1, 1 }, // Get versioned hashes.
+    .{ .BLOBBASEFEE, .{}, .TODO_CUSTOM_FEE, null, 0, 1 }, // Get block's blob base-fee.
 
     // UNUSED: 0x4B ... 0x4F
 
     // //////////////////////////////////////////
     // /////// 50s: Stack, Memory, Storage and Flow Operations
 
-    .{ .POP, .{0x50}, .base, 1, 0 },
-    .{ .MLOAD, .{}, .TODO_CUSTOM_FEE, 1, 1 },
-    .{ .MSTORE, .{}, .TODO_CUSTOM_FEE, 2, 0 },
-    .{ .MSTORE8, .{}, .TODO_CUSTOM_FEE, 2, 0 },
-    .{ .SLOAD, .{}, .TODO_CUSTOM_FEE, 1, 1 },
-    .{ .SSTORE, .{}, .TODO_CUSTOM_FEE, 2, 0 },
-    .{ .JUMP, .{}, .mid, 1, 0 },
-    .{ .JUMPI, .{}, .high, 2, 0 },
-    .{ .PC, .{}, .base, 0, 1 },
-    .{ .MSIZE, .{}, .base, 0, 1 },
-    .{ .GAS, .{}, .base, 0, 1 },
-    .{ .JUMPDEST, .{}, .jumpdest, 0, 0 },
-    .{ .TLOAD, .{}, .TODO_CUSTOM_FEE, 1, 1 },
-    .{ .TSTORE, .{}, .TODO_CUSTOM_FEE, 2, 0 },
-    .{ .MCOPY, .{}, .TODO_CUSTOM_FEE, 3, 0 }, // Copy memory areas.
+    .{ .POP, .{0x50}, .base, null, 1, 0 },
+    .{ .MLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
+    .{ .MSTORE, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
+    .{ .MSTORE8, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
+    .{ .SLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
+    .{ .SSTORE, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
+    .{ .JUMP, .{}, .mid, null, 1, 0 },
+    .{ .JUMPI, .{}, .high, null, 2, 0 },
+    .{ .PC, .{}, .base, null, 0, 1 },
+    .{ .MSIZE, .{}, .base, null, 0, 1 },
+    .{ .GAS, .{}, .base, null, 0, 1 },
+    .{ .JUMPDEST, .{}, .jumpdest, null, 0, 0 },
+    .{ .TLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
+    .{ .TSTORE, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
+    .{ .MCOPY, .{}, .TODO_CUSTOM_FEE, null, 3, 0 }, // Copy memory areas.
 
     // //////////////////////////////////////////
     // /////// 5f, 60s & 70s: Push Operations
-    .{ .PUSH0, .{0x5F}, .base, 0, 1 }, // Push 0 value on stack.
+    .{ .PUSH0, .{0x5F}, .base, null, 0, 1 }, // Push 0 value on stack.
     // PUSH1 ... PUSH32
-    .{ .PUSH, .{ 0x60, 0x7F }, .verylow, 0, 1 }, // Push N byte operand on stack.
+    .{ .PUSH, .{ 0x60, 0x7F }, .verylow, null, 0, 1 }, // Push N byte operand on stack.
 
     // //////////////////////////////////////////
     // /////// 80s: Duplication Operations
 
     // DUP1 ... DUP16
-    .{ .DUP, .{ 0x80, 0x8F }, .verylow, incrFrom(1), incrFrom(2) }, // Duplicate Nth stack item (TODO: To the top of the stack?)
+    .{ .DUP, .{ 0x80, 0x8F }, .verylow, null, incrFrom(1), incrFrom(2) }, // Duplicate Nth stack item (TODO: To the top of the stack?)
 
     // //////////////////////////////////////////
     // /////// 90s: Exchange Operations
 
     // SWAP1 ... SWAP16
-    .{ .SWAP, .{ 0x90, 0x9F }, .verylow, incrFrom(2), incrFrom(2) }, // Swap N and N+1th stack items.
+    .{ .SWAP, .{ 0x90, 0x9F }, .verylow, null, incrFrom(2), incrFrom(2) }, // Swap N and N+1th stack items.
 
     // //////////////////////////////////////////
     // /////// a0s: Logging Operations
 
     // TOOD: LOG have different price values and stack deltas, enumerate manually.
-    .{ .LOG0, .{}, .TODO_CUSTOM_FEE, 2, 0 }, // Append log record with 0 topics.
+    .{ .LOG0, .{}, .TODO_CUSTOM_FEE, null, 2, 0 }, // Append log record with 0 topics.
     // LOG1 ... LOG4
-    .{ .LOG, .{ 0xA1, 0xA4 }, .TODO_CUSTOM_FEE, incrFrom(3), 0 }, // Append log record with N topics.
+    .{ .LOG, .{ 0xA1, 0xA4 }, .TODO_CUSTOM_FEE, null, incrFrom(3), 0 }, // Append log record with N topics.
 
     // UNUSED: 0xA5 ... 0xEF
 
     // //////////////////////////////////////////
     // /////// f0s: System operations
-    .{ .CREATE, .{0xF0}, .TODO_CUSTOM_FEE, 3, 1 }, // Create new account with given code.
-    .{ .CALL, .{}, .TODO_CUSTOM_FEE, 7, 1 }, // Message-call into given account.
-    .{ .CALLCODE, .{}, .TODO_CUSTOM_FEE, 7, 1 }, // Message-call into account with alternative account's code.
-    .{ .RETURN, .{}, .zero, 2, 0 }, // Halt, return output data.
-    .{ .DELEGATECALL, .{}, .TODO_CUSTOM_FEE, 6, 1 }, //
-    .{ .CREATE2, .{}, .TODO_CUSTOM_FEE, 4, 1 }, // Create new account with given code at predictable address.
+    .{ .CREATE, .{0xF0}, .TODO_CUSTOM_FEE, null, 3, 1 }, // Create new account with given code.
+    .{ .CALL, .{}, .TODO_CUSTOM_FEE, null, 7, 1 }, // Message-call into given account.
+    .{ .CALLCODE, .{}, .TODO_CUSTOM_FEE, null, 7, 1 }, // Message-call into account with alternative account's code.
+    .{ .RETURN, .{}, .zero, null, 2, 0 }, // Halt, return output data.
+    .{ .DELEGATECALL, .{}, .TODO_CUSTOM_FEE, null, 6, 1 }, //
+    .{ .CREATE2, .{}, .TODO_CUSTOM_FEE, null, 4, 1 }, // Create new account with given code at predictable address.
     // UNUSED: 0xF6 ... 0xF9
-    .{ .STATICCALL, .{0xFA}, .TODO_CUSTOM_FEE, 6, 1 }, // Static message call into account.
+    .{ .STATICCALL, .{0xFA}, .TODO_CUSTOM_FEE, null, 6, 1 }, // Static message call into account.
     // UNUSED: 0xFB ... 0xFC
-    .{ .REVERT, .{0xFD}, .zero, 2, 0 }, // Halt, revert state changes but still return data and remaining gas.
-    .{ .INVALID, .{}, .zero, 0, 0 }, // Well-known invalid instruction.
-    .{ .SELFDESTRUCT, .{}, .selfdestruct, 1, 0 }, // Halt execution and register account for later deletion OR send all Ether to address (cancun).
+    .{ .REVERT, .{0xFD}, .zero, null, 2, 0 }, // Halt, revert state changes but still return data and remaining gas.
+    .{ .INVALID, .{}, .zero, null, 0, 0 }, // Well-known invalid instruction.
+    .{ .SELFDESTRUCT, .{}, .selfdestruct, null, 1, 0 }, // Halt execution and register account for later deletion OR send all Ether to address (cancun).
 });
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -301,11 +295,11 @@ fn makeEnumField(comptime name: [:0]const u8, comptime value: OPCODE_SIZE) EnumF
 fn makeOpInfo(comptime args: anytype, comptime override: ?struct { ?comptime_int, ?comptime_int }) OpInfo {
     // Due to the way I pass values to override we effectively need two checks here (which is being done). This can be cleaned up later when the comptime interface likely gets a rewrite after zevem works.
     const d_final, const a_final = blk: {
-        const o = override orelse break :blk .{ args[3], args[4] };
+        const o = override orelse break :blk .{ args[4], args[5] };
 
         break :blk .{
-            o[0] orelse args[3],
-            o[1] orelse args[4],
+            o[0] orelse args[4],
+            o[1] orelse args[5],
         };
     };
 
@@ -315,10 +309,15 @@ fn makeOpInfo(comptime args: anytype, comptime override: ?struct { ?comptime_int
     return .{
         // .fee = .{ .constant = args[2] },
         // TODO: Possible to only return the inner .constant or .dynamic? Just curious.
-        .fee = switch (@typeInfo(@TypeOf(args[2]))) {
-            .enum_literal => GasCost{ .constant = args[2] },
-            .@"fn" => GasCost{ .dynamic = args[2] },
-            else => @compileError("expected fee tag or dynamic gas cost function, got " ++ @typeInfo(@TypeOf(args[2]))),
+        // .fee = switch (@typeInfo(@TypeOf(args[2]))) {
+        //     .enum_literal => GasCost{ .constant = args[2] },
+        //     .@"fn" => GasCost{ .dynamic = args[2] },
+        //     else => @compileError("expected fee tag or dynamic gas cost function, got " ++ @typeInfo(@TypeOf(args[2]))),
+        // },
+        // TODO: Type check args[3] is a function pointer or null.
+        .fee = .{
+            .constant = args[2],
+            .dynamic = args[3],
         },
         .delta = d_final,
         .alpha = a_final,
@@ -383,8 +382,8 @@ fn MakeOpCodes(comptime args: anytype) struct { Enum: type, table: [MAX_OPCODE_C
                         const offset = ord - from + 1;
 
                         op_table[ord] = makeOpInfo(df, .{
-                            if (@typeInfo(@TypeOf(df[3])) == .@"fn") df[3](offset - 1) else null,
                             if (@typeInfo(@TypeOf(df[4])) == .@"fn") df[4](offset - 1) else null,
+                            if (@typeInfo(@TypeOf(df[5])) == .@"fn") df[5](offset - 1) else null,
                         });
 
                         // @compileLog("OPINFO:", name_str, op_table[ord]);
@@ -434,15 +433,6 @@ fn gasEXP(self: *EVM) u64 {
     // TODO: What happens if there's nothing at the index though? Model this after `.pop` on BoundedArray? Or custom data structure later?
     const exponent = self.stack.get(self.stack.len - 2);
 
-    const base_fee = fee_table.get(.exp).?;
-
-    // TODO: Optimise this to be branchless
-    const fee = switch (exponent) {
-        0 => base_fee,
-        else => {
-            return base_fee + (fee_table.get(.expbyte).? * ((256 - @clz(exponent) + 7) / 8));
-        },
-    };
-
-    return fee;
+    // G_exp is assigned to EXP's constant pricing since it is common to both variants.
+    return fee_table.get(.expbyte).? * ((256 - @clz(exponent) + 7) / 8);
 }
