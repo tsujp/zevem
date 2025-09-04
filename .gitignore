@@ -7,5 +7,11 @@ zig-out/
 /build-*/
 /docgen_tmp/
 
+# Cache files for Podman with fuse overlayfs and d_type, some problem relating
+#   to that and me having to move the global cache directory which is on a
+#   different partition in that setup ($HOME by default) into this repo so
+#   it's forced onto the same partition.
+zig-global/
+
 # Zig artifacts while not using dnf for whatever reason.
 .jam/zig-*.tar.*

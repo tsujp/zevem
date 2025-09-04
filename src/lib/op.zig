@@ -13,6 +13,8 @@ pub const table = OpCodes.table;
 pub const Fee = FeeSchedule;
 pub const fee_table = fee_map;
 
+const types = @import("types.zig");
+
 // XXX: Arguably overengineered versus just hardcoding u8 and 256.
 const OPCODE_SIZE = u8;
 const MAX_OPCODE_COUNT: comptime_int = std.math.maxInt(OPCODE_SIZE) + 1;
@@ -227,7 +229,7 @@ const OpCodes = MakeOpCodes(.{
 
     .{ .POP, .{0x50}, .base, null, 1, 0 },
     .{ .MLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
-    .{ .MSTORE, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
+    .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0 },
     .{ .MSTORE8, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
     .{ .SLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
     .{ .SSTORE, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
@@ -429,10 +431,285 @@ const evm = @import("evm.zig");
 const DummyEnv = @import("DummyEnv.zig");
 const EVM = evm.New(DummyEnv);
 
+// TODO: Force inline via `inline` or let compiler figure it out? Zig `inline` has additional semantics beyond just inlining.
+// TODO: u10 somewhat arbitrary, max stack length is 1024 and 2^10 = 1024. Is being this specific on parameter value here fine?
+fn stackOffTop(self: *EVM, index: u10) types.Word {
+    // TODO: Do we need assert here, double check if Zig gives us bounds checking for free on _runtime_ slice values (BoundedArray.get accesses the backing slice by index). I don't think we do, only for comptime known.
+    return self.stack.get(self.stack.len - index - 1);
+}
+
 fn gasEXP(self: *EVM) u64 {
     // TODO: What happens if there's nothing at the index though? Model this after `.pop` on BoundedArray? Or custom data structure later?
     const exponent = self.stack.get(self.stack.len - 2);
 
     // G_exp is assigned to EXP's constant pricing since it is common to both variants.
     return fee_table.get(.expbyte).? * ((256 - @clz(exponent) + 7) / 8);
+}
+
+// Gas payable due to change in size of addressed memory.
+// TODO: Better doc-ish comment here.
+// TODO: Put this on MSTORE et al as their dynamic cost function, but really it's for any change in memory size. Another table for this or another way to associate to relevant opcodes? This seems fine _for now_.
+// TODO: Instead of another tuple element on MakeOpCodes, going to call the memory expansion function required by an opcodes dynamic gas calculation from within the latter. This means it's not easy to change at runtime but a bunch of stuff is going to probably need to be changed for easier enacting of that anyway so _for now_ this is fine and beats adding another element to comptime construct as recently done for dynamic gas.
+
+// This is specifically memory expansions of the form: max(μ_i, ceil((μ_s[0] + 32) ÷ 32)) as
+//   found on opcodes like MSTORE.
+fn gasMemory(self: *EVM) u64 {
+    _ = self;
+    // In all usage cases of this memory expansion type:
+    //   s[0] = memory offset to write from (i.e. an address in EVM memory μ_i).
+
+    // const before_size = self.mem.items.len;
+    // const after_size = stackOffTop(self, 0) + 32;
+    // const ceiled = @divFloor(after_size - 1, 32) + 1;
+    // const sum_thing = @addWithOverflow(stackOffTop(self, 0), 32);
+    // const wat = @divFloor(sum_thing[0] - 1, 32) + 1;
+
+    // if (sum_thing[1] == 1) {
+    //     return error.MemResizeUInt256Overflow;
+    // }
+    // std.debug.print("BEFORE={d}, AFTER={d}, CEIL={d}, SUM_THING={any}, WAT={any}\n", .{ before_size, after_size, ceiled, sum_thing, wat });
+    // @max(self.mem.items.len);
+    // const thing = @addWithOverflow(self.stack.get(self.stack.len - 1))
+    return 0;
+}
+
+// TODO: Only pub export this in debug build.
+// TODO: Better data structure and implementation in future. Unsure if Zig will automatically
+//       de-duplicate the repeated strings currently (could test this later on).
+// Ugly map of stack annotations per opcode for trace output.
+pub const annotation = MakeOpAnnotations(.{
+    .{ .{ .ADD, .MUL, .SUB, .LT, .GT, .SLT, .SGT, .EQ, .AND, .OR, .XOR }, .{ .{ "a", "b" }, .{"result"} } },
+    .{ .{ .DIV, .SDIV }, .{ .{ "num", "denom" }, .{"result"} } },
+    .{ .{ .MOD, .SMOD }, .{ .{ "a", "mod" }, .{"result"} } },
+    .{ .{ .ADDMOD, .MULMOD }, .{ .{ "a", "b", "mod" }, .{"result"} } },
+    .{ .{.EXP}, .{ .{ "base", "exp" }, .{"result"} } },
+    .{ .{.SIGNEXTEND}, .{ .{ "byte_size", "a" }, .{"result"} } },
+    .{ .{ .ISZERO, .NOT }, .{ .{"a"}, .{"result"} } },
+    .{ .{.BYTE}, .{ .{ "msb_offset", "operand" }, .{"result"} } },
+    .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
+    .{ .{.POP}, .{ .{"discard"}, .{} } },
+    .{ .{.MSTORE}, .{ .{ "offset", "value" }, .{} } },
+    .{ .{.PUSH0}, .{ .{}, .{"constant"} } },
+    .{ .{ 32, .PUSH }, .{ .{}, .{"bytes"} } },
+    .{ .{ 16, .DUP }, .{ .{.{ incrFrom(1), .DUP1, "duped" }}, .{"to"} } },
+});
+
+const StackAnnotation = struct {
+    index: u10,
+    text: []const u8,
+};
+
+pub const OpAnnotation = struct {
+    delta: []const StackAnnotation,
+    alpha: []const StackAnnotation,
+};
+
+// Given a single annotation definition tuple (delta/alpha) construct the annotation indices and
+//   associated values for that delta/alpha.
+fn makeAnnotation(op: OpCodes.Enum, annotation_def: anytype, data: [*]StackAnnotation) void {
+    // Each element of the definition tuple.
+    for (annotation_def, 0..) |adf, adf_i| {
+        // TODO: Ordinal + previous to allow for mixing like opcode range definitions? I don't
+        //       think we'll ever need that though its either implied indices or incrFrom i.e. they
+        //       are mutually exclusive.
+
+        switch (@typeInfo(@TypeOf(adf))) {
+            .pointer => |ad_type_info| {
+                if (!(ad_type_info.is_const == true and
+                    ad_type_info.child == [adf.len:0]u8 and
+                    ad_type_info.sentinel_ptr == null))
+                {
+                    @compileError("annotation definition: expected null-terminated slice of u8, got " ++ adf);
+                }
+
+                // It's a slice! Simples!
+                data[adf_i] = .{ .index = adf_i, .text = adf };
+            },
+            .@"struct" => |ad_type_info| {
+                if (ad_type_info.is_tuple == false) {
+                    @compileError("annotation definition: expected tuple, got " ++ ad_type_info);
+                }
+
+                const length = ad_type_info.fields.len;
+                const adti_fields = ad_type_info.fields;
+
+                if (length <= 1) {
+                    var buf: [12]u8 = undefined;
+                    const length_str = try std.fmt.bufPrint(&buf, "{}", .{length});
+                    @compileError("annotation definition: expected tuple with at least 2 elements, got " ++ length_str);
+                }
+
+                // Last argument must always be a string.
+                if (isNullTerminatedSlice(adf[length - 1]) == false) {
+                    @compileError("annotation definition: expected string in last element of auto-increment definition");
+                }
+
+                switch (length) {
+                    // No offset, [0] must be an integer.
+                    2 => {
+                        if (adti_fields[0].type != comptime_int) {
+                            @compileError("annotation definition: first element of 2-element auto-increment must be comptime_int");
+                        }
+
+                        data[adf_i] = .{
+                            .index = adf[0],
+                            .text = adf[1],
+                        };
+                    },
+                    // Offset, [0] must be fn (comptime_int) comptime_int, [1] enum offset.
+                    3 => {
+                        if (adti_fields[0].type != fn (comptime_int) comptime_int) {
+                            @compileError("annotation definition: first element of 3-element auto-increment must function of prototype: fn (comptime_int) comptime_int");
+                        }
+
+                        // TODO: Check enum at index 1 (i.e. 2nd element) is actually in OpCodes.Enum
+                        const offset = @intFromEnum(op) - @intFromEnum(@field(OpCodes.Enum, @tagName(adf[1])));
+                        const idx = adf[0](offset) - 1;
+
+                        data[adf_i] = .{
+                            .index = idx,
+                            .text = adf[2],
+                        };
+                    },
+                    else => {
+                        @compileError("annotation definition: too many arguments to tuple, expect 2 or 3");
+                    },
+                }
+            },
+            else => {
+                // TODO: cbf typing a full error string here right now. I know what it is and this will likely change so making it this robust right now is kinda exhausting honestly, or I am just tired and my brain is getting into "annoyed at everything" mode.
+                @compileError("annotation definition: bad type");
+            },
+        }
+    }
+}
+
+// const ComptimeAssertion = struct {
+//     result: bool,
+//     err: ?[]const u8,
+// };
+
+fn isNullTerminatedSlice(comptime args: anytype) bool {
+    switch (@typeInfo(@TypeOf(args))) {
+        .pointer => |type_info| {
+            if (!(type_info.is_const == true and
+                type_info.child == [args.len:0]u8 and
+                type_info.sentinel_ptr == null))
+            {
+                return false;
+            }
+
+            return true;
+        },
+        else => {
+            return false;
+        },
+    }
+}
+
+// fn isTuple(comptime args: anytype, length: comptime_int) ComptimeAssertion {
+//     const ArgsType = @TypeOf(args);
+//     const args_type_info = @typeInfo(ArgsType);
+
+//     if (!(args_type_info == .@"struct" and args_type_info.@"struct".is_tuple == true)) {
+//         return .{
+//             .result = false,
+//             .err = "expected tuple, got " ++ @typeName(ArgsType),
+//         };
+//         // @compileError("expected tuple, got " ++ @typeName(ArgsType));
+//     }
+
+//     const actual_length = args_type_info.@"struct".fields.len;
+//     if (actual_length != length) {
+//         return .{
+//             .result = false,
+//             .err = "expected tuple of length " ++ length ++ " instead got " ++ actual_length,
+//         };
+//         // @compileError("expected tuple of length " ++ length ++ " instead got " ++ actual_length);
+//     }
+
+//     return .{
+//         .result = true,
+//         .err = null,
+//     };
+// }
+
+fn MakeOpAnnotations(comptime args: anytype) EnumMap(OpCodes.Enum, OpAnnotation) {
+    const ArgsType = @TypeOf(args);
+    const args_type_info = @typeInfo(ArgsType);
+
+    if (!(args_type_info == .@"struct" and args_type_info.@"struct".is_tuple == true)) {
+        @compileError("expected tuple of definitions, got " ++ @typeName(ArgsType));
+    }
+
+    comptime var op_map: EnumMap(OpCodes.Enum, OpAnnotation) = .{};
+
+    // Each "top-level" tuple argument.
+    inline for (args) |df| {
+        const key_def = df[0];
+
+        const kd_type_info = @typeInfo(@TypeOf(key_def));
+        if (!(kd_type_info == .@"struct" and kd_type_info.@"struct".is_tuple == true)) {
+            @compileError("expected op to annotate to be a tuple, got " ++ @typeName(@TypeOf(key_def)));
+        }
+        const kdti_struct = kd_type_info.@"struct";
+
+        // If the first element of the op(s) to annotate is an integer that means we will iterate
+        //   and construct op names in combination with the second (and final) element.
+        const repeat_count = if (kdti_struct.fields[0].type == comptime_int) blk: {
+            if (kdti_struct.fields.len == 2 and @typeInfo(@TypeOf(key_def[1])) == .enum_literal) {
+                break :blk key_def[0];
+            } else {
+                @compileError("iterated op definition tuples must consist of exactly 2 items: an integer count of the number of times to iterate; and the base op name, got " ++ key_def);
+            }
+        } else 0;
+
+        // TODO: Get this if-else set smaller/more-compact? Set from if-expression directly or
+        //       some other pattern. This works so is fine for now.
+        // Pre-enumerate op-names to reduce branching complexity and share some logic (like setting
+        //   the actual annotation value) later.
+        const op_names = if (repeat_count > 0) blk: {
+            comptime var _n: [repeat_count]OpCodes.Enum = undefined;
+
+            const name_str = @tagName(key_def[1]);
+
+            inline for (0..repeat_count) |rci| {
+                _n[rci] = @field(OpCodes.Enum, std.fmt.comptimePrint("{s}{d}", .{ name_str, rci + 1 }));
+            }
+
+            break :blk _n;
+        } else blk: {
+            comptime var _n: [kdti_struct.fields.len]OpCodes.Enum = undefined;
+
+            inline for (key_def, 0..) |k, i| {
+                _n[i] = k;
+            }
+
+            break :blk _n;
+        };
+
+        // Each op name we constructed.
+        for (op_names) |on| {
+            const annotation_def = df[1];
+
+            comptime var delta_annotation: [annotation_def[0].len]StackAnnotation = undefined;
+            comptime var alpha_annotation: [annotation_def[1].len]StackAnnotation = undefined;
+
+            makeAnnotation(on, annotation_def[0], &delta_annotation);
+            makeAnnotation(on, annotation_def[1], &alpha_annotation);
+
+            // Required to force comptime data into correct location in binary, otherwise compiler
+            //   errors.
+            // See:  https://ziggit.dev/t/comptime-mutable-memory-changes/3702
+            const da2 = delta_annotation;
+            const aa2 = alpha_annotation;
+
+            op_map.put(on, .{
+                .delta = &da2,
+                .alpha = &aa2,
+            });
+        }
+    }
+
+    return op_map;
 }

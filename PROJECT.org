@@ -8,6 +8,57 @@
 
 * Zevem
 
+** Project Focus
+Current area of focus so I don't forget what I was doing.
+
+*** TODO Message Call
+
+TODO: Finish refreshing myself on what I need to catch up on here.
+
+** Implementation
+
+*** Gas
+Ref: [[#h:BF533F42-7A90-4686-8AF8-5443D197FE14][YP Gas]]
+
+TODO: Construct a list like this from the local subtree hierarchy here. That way I get both easy checkbox summary /and/ state tracking via LOGBOOK which can only be done on headings.
+
+1. [ ] Intrinsic cost
+2. [ ] Subordinate message calls or contract creation
+   - [ ] CREATE
+   - [ ] CREATE2
+   - [ ] CALL
+   - [ ] CALLCODE
+3. [ ] Memory usage
+
+**** Memory usage
+:LOGBOOK:
+CLOCK: [2025-08-25 Mon 14:51]--[2025-08-25 Mon 15:00] =>  0:09
+CLOCK: [2025-08-24 Mon 18:30]--[2025-08-25 Mon 00:47] =>  6:17
+:END:
+
+C_mem(μ_i′) - C_mem(μ_i)
+
+***** MSTORE
+
+
+*** Misc
+
+**** Disassembly Logging
+:LOGBOOK:
+CLOCK: [2025-09-04 Thu 22:51]--[2025-09-05 Fri 00:47] =>  1:56
+CLOCK: [2025-09-04 Thu 21:47]--[2025-09-04 Thu 22:31] =>  0:44
+CLOCK: [2025-09-04 Thu 19:26]--[2025-09-04 Thu 21:40] =>  2:14
+CLOCK: [2025-09-02 Tue 21:18]--[2025-09-02 Tue 21:21] =>  0:03
+CLOCK: [2025-09-02 Tue 18:47]--[2025-09-02 Tue 20:53] =>  2:06
+CLOCK: [2025-09-01 Mon 21:34]--[2025-09-01 Mon 21:41] =>  0:07
+CLOCK: [2025-09-01 Mon 19:22]--[2025-09-01 Mon 20:37] =>  1:15
+CLOCK: [2025-09-01 Mon 16:47]--[2025-09-01 Mon 17:55] =>  1:08
+CLOCK: [2025-09-01 Mon 14:42]--[2025-09-01 Mon 15:06] =>  0:24
+CLOCK: [2025-08-30 Sat 17:51]--[2025-08-30 Sat 20:54] =>  3:03
+:END:
+
+Good-enough disassembly-type logging until "real" and "better" (perhaps structured) logging implemented once zevem is 1.0. These are the functions ~traceOpNew~ and friends.
+
 ** Yellowpaper Notes
 
 *** Conventions
@@ -89,6 +140,10 @@ bottom of page 4 in yp
 
 *************** TODO Machine state notes
 *************** END
+
+μ_i: bottom of page 29 is the maximum number of words of active memory, and pg15 9.4.1
+m: memory contents, a series of zeroes of size 2^256.
+i: active number of words in memory, counting continuously from zero.
 
 **** Transaction
 :PROPERTIES:
@@ -296,6 +351,9 @@ BLOBHASH: https://eips.ethereum.org/EIPS/eip-4844
 BLOBBASEFEE: https://eips.ethereum.org/EIPS/eip-7516
 
 *** Gas
+:PROPERTIES:
+:CUSTOM_ID: h:BF533F42-7A90-4686-8AF8-5443D197FE14
+:END:
 
 Opcodes can have associated constant and/or dynamic gas prices and (with rare exceptions) are checked /prior/ to opcode execution.
 
@@ -310,7 +368,12 @@ Section 9.2 outlines three circumstances where gas is payable:
 2. Subordinate message calls or contract creation (CREATE, CREATE2, CALL, CALLCODE).
 3. Increase in usage of memory.
 
-Opcodes which alter memory size pay gas according to the magnitude of memory modified in proportion to the smallest multiple of 32-bytes (i.e. WORD) required such that all indices (whether read or write) are included in said range. Essentially, any access to an area of memory 32-bytes greater than any previously indexed memory will incur a gas cost.
+(pg14 9.2) Opcodes which alter memory size pay gas according to the magnitude of memory modified in proportion to the smallest multiple of 32-bytes (i.e. WORD) required such that all indices (whether read or write) are included in said range. Essentially, any access to an area of memory 32-bytes greater than any previously indexed memory will incur a gas cost.
+
+ROUGH:
+pg30 330: memory-expansion function M used to determine the new u_i size, some opcodes (e.g. MSTORE) have a specific function defined at their definition within H.2 for what u_i should be instead. Not all opcodes use M, or have their own inline u_i definition.
+pg29 328: memory-cost function C_mem simply computes the gas cost given memory size
+SOURCE?: Memory is byte-aligned (2^8) and not u256 aligned.
 
 ** Datastructures
 
@@ -319,14 +382,6 @@ Opcodes which alter memory size pay gas according to the magnitude of memory mod
 An enum of opcodes tagged with a u8 provides constant time lookup, but how to associate gas cost and stack deltas without going crazy on the size of the datastructure.
 
 Is a multiarraylist but keyed by an enum an option?
-
-* Project Focus
-
-Current area of focus so I don't forget what I was doing.
-
-** TODO Message Call
-
-TODO: Finish refreshing myself on what I need to catch up on here.
 
 * Zig
 
@@ -584,7 +639,11 @@ CLOSED: [2025-08-12 Tue 19:12]
 :LOGBOOK:
 - State "DONE"       from "TODO"       [2025-08-12 Tue 19:12]
 :END:
-** TODO Update to Zig 0.14.1
+** DONE Update to Zig 0.14.1
+CLOSED: [2025-08-24 Sun 18:17]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2025-08-24 Sun 18:17]
+:END:
 ** TODO Would keccak_p.zig benefit from the labelled switch api changes?
 See: https://ziglang.org/documentation/master/std/#src/std/crypto/keccak_p.zig
 
@@ -665,6 +724,26 @@ Haven't looked into fuzzing approaches yet; just found this while browsing other
 Instead of evmBasicBytecode or most manual literal tests in source, perhaps replace them with test files on-disk which are read to execute EVM instructions and then the unit test in Zig code is about asserting expected values.
 
 This feels like more of an experiment since the value in doing so is perhaps dubious versus in-source tests. Have to investigate. Not very important.
+
+** TODO Columnar disassembly output hacking
+:LOGBOOK:
+- State "TODO"       from              [2025-08-30 Sat 17:45]
+:END:
+
+Could do this to get nice auto-column aligned output wihtout having to write too much custom stuff.
+
+#+begin_src sh
+0:0021(33)   60 PUSH1   gas=(3, 0, 78994)
+0:0023(35)   7f PUSH32  gas=(3, 0, 78991)
+
+printf '%s\n' $'0:0021(33)|60 PUSH1|gas=(3, 0, 78994)\n0:0023(35)|7f PUSH32|gas=(3, 0, 78991)\n0 -> left=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' | column -t -s '|'
+
+
+                  0 -> left=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+
+
+printf '%s\n' $'0:0021(33)|60|PUSH1   gas=(3, 0, 78994)\n0:0023(35)|7faa|PUSH32  gas=(3, 0, 78991)\n| | |0 -> left=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' | column -t -s '|'
+#+end_src
 
 ** Old project-todo.org file contents dumped within
 :PROPERTIES:
