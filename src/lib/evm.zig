@@ -45,19 +45,6 @@ const TraceEndline = enum {
     cntln,
 };
 
-// var priorFinal: ?*fn() void = null;
-// var priorFinal: ?*const fn() void = null;
-
-// fn tracePriorFinal(__annotations: @import("op.zig").OpAnnotation, __alpha: u5) type {
-//     return struct {
-//         pub fn call(self: *Self) void {
-//             for (0..__alpha) |i| {
-//                 print("                {d} <- {s}\u{001b}[2m=\u{001b}[0m{x}\n", .{ i, __annotations.alpha[i], self.stack.get(self.stack.len - i - 1) });
-//             }
-//         }
-//     };
-// }
-
 // XXX: Could have an instruction struct/enum/tagged-union which @calls and inlines some so OP_PUSH3 finds the associated (internal) instruction which has the logic to execute OP_PUSH3 but also things like gas pricing, and any logging. Investigate later, feels too spaghetti for right now.
 // TODO: Better interface/implementation or just _stuff_ around tracing; idk. Do later even though it's extremely tempting to hack on cool comptime things now.
 fn traceOp(op: OpCode, pc: usize, endline: TraceEndline) void {
@@ -69,9 +56,6 @@ fn traceOp(op: OpCode, pc: usize, endline: TraceEndline) void {
 fn traceOpPush(pc: usize, operand: Word) void {
     print("new_pc={d}, pushed=0x{x}\n", .{ pc, operand });
 }
-
-// Meant to print _additional_ information for opcodes which take 2 items off the stack then put 1 back on.
-fn traceStackTake() void {}
 
 // TODO [2025/08/12]: I had something planned in the past with errors and them having some
 //   contextual values (e.g. associated data) but cannot remember right now.
@@ -138,7 +122,6 @@ pub fn New(comptime Environment: type) type {
         /// Remaining gas available for executing transaction: T_g
         gas: u64,
 
-        // TODO: Zig 0.14.0 deprecates managed container types. Unmanaged container types must pass the same allocator at the callsite for methods which require it and do so every time. Perhaps create a wrapper (or appropriate custom type) later on to ease this (potential) burden. Zig std ArrayHashMapWithAllocator is an example of such.
         /// Machine state: μ_m, for which μ_i is it's length.
         mem: std.ArrayListUnmanaged(u8),
 
@@ -174,7 +157,6 @@ pub fn New(comptime Environment: type) type {
             self.alloc.free(self.return_data);
         }
 
-        // TODO: Explicit inline keyword or let compiler decide?
         fn nextOp(self: *Self, rom: []const u8) !OpCode {
             // XXX: Validating the stack items here (might) be inefficient as not every opcode requires it (i.e. profile the actual impact) however it is simpler which is better for now (getting zevem working in the first place).
             // XXX: Also if validating stack items here the use of BoundedArray from stdlib is executing potentially useless assertions on presence of items (i.e. .pop() etc) which we could do without if this approach is favoured (i.e. after profiling).
@@ -182,23 +164,12 @@ pub fn New(comptime Environment: type) type {
             // defer zt.deinit();
             // defer self.pc += 1;
 
-            // if (priorFinal != null) priorFinal().?;
-            // if (self.prior_final) |pf| {
-            //     for (0..pf.alpha) |i| {
-            //         print("                {d} <<-- {s:[3]}\u{001b}[2m=\u{001b}[0m{x}\n", .{ i, pf.annotation[i], self.stack.get(self.stack.len - i - 1), pf.pad });
-            //     }
-            // }
             if (self.prior_final) |pf| {
                 for (pf.annotation) |aa| {
                     print("                {d} <<-- {s:[3]}\u{001b}[2m=\u{001b}[0m{x}\n", .{ aa.index, aa.text, self.stack.get(self.stack.len - aa.index - 1), pf.pad });
                 }
             }
             self.prior_final = null;
-
-            // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
-            // print("nextOp: rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
-
-            // self.gas -= try consumeGas(self, .transaction);
 
             // Attempt to access beyond the end of bytecode is a STOP (op 0x00) per spec.
             const raw_bytecode = if (self.pc >= rom.len) return OpCode.STOP else rom[self.pc];
@@ -209,7 +180,6 @@ pub fn New(comptime Environment: type) type {
             const opinfo = op_table[raw_bytecode];
 
             // TODO: Conditionally only execute traceOp if this is a debug build, or has a build argument (e.g. with-tracing or something).
-            // traceOp(opcode, self.pc, .endln);
             self.traceOpNew(opcode);
 
             // Validate stack requirements.
@@ -240,13 +210,6 @@ pub fn New(comptime Environment: type) type {
                 .alpha = &.{},
             };
 
-            // const pad_delta = blk: {
-            //     var len: usize = 0;
-            //     for (annotations.delta) |d| {
-            //         if (d.len > len) len = d.len;
-            //     }
-            //     break :blk len;
-            // };
             const pad = blk: {
                 var len: usize = 0;
                 for (annotations.delta) |d| {
@@ -258,27 +221,12 @@ pub fn New(comptime Environment: type) type {
                 break :blk len;
             };
 
-            // for (0..opinfo.delta) |i| {
-            //     // Indexed format argument must come last in tuple otherwise fmt.zig errors.
-            //     print("                {d} -->> {s:[3]}\u{001b}[2m=\u{001b}[0m{x}\n", .{ i, annotations.delta[i], self.stack.get(self.stack.len - i - 1), pad });
-            // }
             for (annotations.delta) |ad| {
                 // Indexed format argument must come last in tuple otherwise fmt.zig errors.
                 print("                {d} -->> {s:[3]}\u{001b}[2m=\u{001b}[0m{x}\n", .{ ad.index, ad.text, self.stack.get(self.stack.len - ad.index - 1), pad });
             }
 
-            // TODO: Wrap in debug conditional.
             // Print opinfo alpha.
-            // if (opinfo.alpha > 0) {
-            //     self.prior_final = .{
-            //         .annotation = annotations.alpha,
-            //         .alpha = opinfo.alpha,
-            //         .pad = pad,
-            //     };
-            //     // const abc = annotations;
-            //     // const abc2 = opinfo.alpha;
-            //     // self.prior_final = self.tracePriorFinal(abc, abc2).call;
-            // }
             if (annotations.alpha.len > 0) {
                 self.prior_final = .{
                     .annotation = annotations.alpha,
@@ -290,44 +238,6 @@ pub fn New(comptime Environment: type) type {
         }
 
         // JORDAN: Function `digits2` in Zig std/fmt.zig interesting.
-
-        // TODO: Have these as a comptime function which will inline flip the sign instead?
-
-        // fn tracePriorFinal(self: *Self, __annotations: OpAnnotation, __alpha: u5) *const fn() void {
-        //     const Callback = struct {
-        //         __annotations: OpAnnotation,
-        //         __alpha: u5,
-
-        //         pub fn call(inner_self: @This()) void {
-        //             for (0..inner_self.__alpha) |i| {
-        //                 print("                {d} <- {s}\u{001b}[2m=\u{001b}[0m{x}\n", .{ i, inner_self.__annotations.alpha[i], self.stack.get(self.stack.len - i - 1) });
-        //             }
-        //         }
-        //     };
-
-        //     const c = Callback{
-        //         .__annotations = __annotations,
-        //         .__alpha = __alpha,
-        //     };
-
-        //     @compileLog("ABC", c);
-
-        //     const abc: *const fn() void = c.call;
-
-        //     return abc;
-        // }
-        // fn tracePriorFinal(self: *Self, abc: OpAnnotation, abc2: u5) *const fn() void {
-        //     return struct {
-        //         __annotations: OpAnnotation,
-        //         __alpha: u5,
-
-        //         pub fn call(inner_self: @This()) void {
-        //             for (0..inner_self.__alpha) |i| {
-        //                 print("                {d} <- {s}\u{001b}[2m=\u{001b}[0m{x}\n", .{ i, inner_self.__annotations.alpha[i], self.stack.get(self.stack.len - i - 1) });
-        //             }
-        //         }
-        //     }{ .__annotations = abc, .__alpha = abc2};
-        // }
 
         // TODO: Log everything in logfmt style and have a separate renderer for a disassembly-style display?
         fn traceOpNew(self: *Self, op: OpCode) void {
@@ -411,8 +321,6 @@ pub fn New(comptime Environment: type) type {
                     return;
                 },
                 .ADD => {
-                    // traceOp(op, self.pc, .endln);
-
                     // TODO: Here and for other similar log with traceStackTake
 
                     // TODO: Here and elsewhere with simpler modulo logic is this compiled to a bitwise AND? (and for others as appropriate). Use of this form involves peer type resolution so any overheads etc need to be investigated.
@@ -421,22 +329,16 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .MUL => {
-                    // traceOp(op, self.pc, .endln);
-
                     try self.stack.append(self.stack.pop().? *% self.stack.pop().?);
 
                     continue :sw try self.nextOp(rom);
                 },
                 .SUB => {
-                    // traceOp(op, self.pc, .endln);
-
                     try self.stack.append(self.stack.pop().? -% self.stack.pop().?);
 
                     continue :sw try self.nextOp(rom);
                 },
                 .DIV => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] = numerator ; s[1] = denominator.
                     const numerator = self.stack.pop().?;
                     const denominator = self.stack.pop().?;
@@ -447,8 +349,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SDIV => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] = numerator ; s[1] = denominator.
                     // Both values treated as 2's complement signed 256-bit integers.
                     const numerator: i256 = @bitCast(self.stack.pop().?);
@@ -466,8 +366,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .MOD => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] = numerator ; s[1] = denominator.
                     const numerator = self.stack.pop().?;
                     const denominator = self.stack.pop().?;
@@ -478,8 +376,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SMOD => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] = numerator ; s[1] = denominator.
                     // Both values treated as 2's complement signed 256-bit integers.
                     const numerator: i256 = @bitCast(self.stack.pop().?);
@@ -490,8 +386,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .ADDMOD => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0, 1] = addition operands ; s[2] = denominator.
                     // TODO: Definitely a nicer way of implementing this outside of u257 and an intCast; optimise for that later.
 
@@ -510,8 +404,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .MULMOD => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0, 1] = addition operands ; s[2] = denominator.
                     // TODO: Ditto on modulo optimisation.
                     const left: u512 = self.stack.pop().?;
@@ -529,8 +421,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .EXP => {
-                    // traceOp(op, self.pc, .endln);
-
                     // XXX: Alternative left-to-right binary exponentiation uses one less u512 but requires more bit-twiddling. Consider alternatives / optimise later on.
 
                     // s[0] = base ; s[1] = exponent.
@@ -558,8 +448,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SIGNEXTEND => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] = byte size of target value minus one ; s[1] = value
 
                     // s[1] is read as a two's complement signed integer; if s[1] has a meaningful
@@ -595,8 +483,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .LT => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] < s[1]
 
                     try self.stack.append(@intFromBool(self.stack.pop().? < self.stack.pop().?));
@@ -604,8 +490,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .GT => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] > s[1]
 
                     try self.stack.append(@intFromBool(self.stack.pop().? > self.stack.pop().?));
@@ -613,8 +497,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SLT => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] < s[1]
 
                     // zig fmt: off
@@ -627,8 +509,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SGT => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] > s[1]
 
                     // zig fmt: off
@@ -641,26 +521,18 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .EQ => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] == s[1]
-
                     try self.stack.append(@intFromBool(self.stack.pop().? == self.stack.pop().?));
 
                     continue :sw try self.nextOp(rom);
                 },
                 .ISZERO => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] == 0
-
                     try self.stack.append(@intFromBool(self.stack.pop().? == 0));
 
                     continue :sw try self.nextOp(rom);
                 },
                 .AND => {
-                    // traceOp(op, self.pc, .endln);
-
                     // Bitwise: s[0] AND s[1]
 
                     // TODO: A bunch of these kinds of patterns can likely be optimised to just popping one element off, and then setting the top stack element. Optimise after BoundedArray is kept or changed.
@@ -669,35 +541,24 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .OR => {
-                    // traceOp(op, self.pc, .endln);
-
                     // Bitwise: s[0] OR s[1]
-
                     try self.stack.append(self.stack.pop().? | self.stack.pop().?);
 
                     continue :sw try self.nextOp(rom);
                 },
                 .XOR => {
-                    // traceOp(op, self.pc, .endln);
-
                     // Bitwise: s[0] XOR s[1]
-
                     try self.stack.append(self.stack.pop().? ^ self.stack.pop().?);
 
                     continue :sw try self.nextOp(rom);
                 },
                 .NOT => {
-                    // traceOp(op, self.pc, .endln);
-
                     // Bitwise: NOT s[0]
-
                     try self.stack.append(~self.stack.pop().?);
 
                     continue :sw try self.nextOp(rom);
                 },
                 .BYTE => {
-                    // traceOp(op, self.pc, .endln);
-
                     // TODO: Double check this is always removing 2 stack args.
                     // TODO: Double check it's always working from most-significant byte.
 
@@ -727,8 +588,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 // XXX: For SHL, SHR, SAR: which is faster doing these bitwise shifts or equivalent arithmetic (floor division etc). Optimisation. Need to benchmark the assembly from these and compare it to the "naive" way of doing them (just divisions etc) since LLVM _probably_ does a better job..?
                 .SHL => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] = bits to shift by ; s[1] = value to be shifted
 
                     const bits = self.stack.pop().?;
@@ -746,8 +605,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SHR => {
-                    // traceOp(op, self.pc, .endln);
-
                     // s[0] = bits to shift by ; s[1] = value to be shifted
 
                     const bits = self.stack.pop().?;
@@ -764,8 +621,6 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SAR => {
-                    // traceOp(op, self.pc, .endln);
-
                     // TODO: llvm has an intrinsic for this I believe, use theirs instead? Could be an optimisation for later but then would tie us to llvm.
 
                     // s[0] = bits to shift by ; s[1] = value to be shifted
@@ -799,8 +654,6 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .BALANCE => {
-                    // traceOp(op, self.pc, .endln);
-
                     try self.stack.append(try self.env.getBalance());
                 },
                 // TODO: Spit as appropriate when implementing.
@@ -862,8 +715,6 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .POP => {
-                    // traceOp(op, self.pc, .endln);
-
                     _ = self.stack.pop().?;
 
                     continue :sw try self.nextOp(rom);
@@ -873,9 +724,6 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .MSTORE => {
-                    // // traceOp(op, self.pc, .endln);
-                    // self.// traceOpNew(op, self.pc);
-
                     // s[0] = memory offset to write from ; s[1] = value to write
 
                     const offset = self.stack.pop().?;
@@ -921,8 +769,6 @@ pub fn New(comptime Environment: type) type {
                 },
                 // TODO: MSTORE8 to MCOPY
                 .PUSH0 => {
-                    // traceOp(op, self.pc, .endln);
-
                     try self.stack.append(0);
 
                     continue :sw try self.nextOp(rom);
@@ -934,7 +780,6 @@ pub fn New(comptime Environment: type) type {
                        .PUSH25, .PUSH26, .PUSH27, .PUSH28, .PUSH29, .PUSH30, .PUSH31, .PUSH32
                 // zig fmt: on
                 => |op| {
-                    // traceOp(op, self.pc, .cntln);
                     const zt = traceZone(@src(), "PUSH");
                     zt.text(@tagName(op));
                     defer zt.deinit();
@@ -971,8 +816,6 @@ pub fn New(comptime Environment: type) type {
                        .DUP9, .DUP10, .DUP11, .DUP12, .DUP13, .DUP14, .DUP15, .DUP16
                 // zig fmt: on
                 => |op| {
-                    // traceOp(op, self.pc, .endln);
-
                     // Offset vs DUP1 is index from top of stack + 1 to duplicate.
                     const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.DUP1);
 
@@ -1003,7 +846,6 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .RETURN, .REVERT => |op| {
-                    // traceOp(op, self.pc, .endln);
                     // TODO: Dynamic gas for these opcodes.
 
                     // s[0] = memory offset to read from ; s[1] = bytes to read
@@ -1040,7 +882,3 @@ pub fn New(comptime Environment: type) type {
         }
     };
 }
-
-// test "blah" {
-//     try std.testing.expect(true == true);
-// }

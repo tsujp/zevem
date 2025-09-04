@@ -617,6 +617,14 @@ Maybe (if things like tracy or valgrind for whatever reason aren't good enough, 
 
 * Misc TODOs
 
+** TODO ArrayHashMapWithAllocator inspiration potential custom wrapper type
+:LOGBOOK:
+- State "TODO"       from              [2025-09-05 Fri 03:28] \\
+  Prior comment on EVM.mem
+:END:
+
+Zig 0.14.0 deprecates managed container types. Unmanaged container types must pass the same allocator at the callsite for methods which require it and do so every time. Perhaps create a wrapper (or appropriate custom type) later on to ease this (potential) burden. Zig std ArrayHashMapWithAllocator is an example of such.
+
 ** TODO Look at using the Writer API style for things like output
 :LOGBOOK:
 - State "TODO"       from              [2025-08-12 Tue 19:11]

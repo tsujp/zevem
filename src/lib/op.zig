@@ -584,11 +584,6 @@ fn makeAnnotation(op: OpCodes.Enum, annotation_def: anytype, data: [*]StackAnnot
     }
 }
 
-// const ComptimeAssertion = struct {
-//     result: bool,
-//     err: ?[]const u8,
-// };
-
 fn isNullTerminatedSlice(comptime args: anytype) bool {
     switch (@typeInfo(@TypeOf(args))) {
         .pointer => |type_info| {
@@ -606,33 +601,6 @@ fn isNullTerminatedSlice(comptime args: anytype) bool {
         },
     }
 }
-
-// fn isTuple(comptime args: anytype, length: comptime_int) ComptimeAssertion {
-//     const ArgsType = @TypeOf(args);
-//     const args_type_info = @typeInfo(ArgsType);
-
-//     if (!(args_type_info == .@"struct" and args_type_info.@"struct".is_tuple == true)) {
-//         return .{
-//             .result = false,
-//             .err = "expected tuple, got " ++ @typeName(ArgsType),
-//         };
-//         // @compileError("expected tuple, got " ++ @typeName(ArgsType));
-//     }
-
-//     const actual_length = args_type_info.@"struct".fields.len;
-//     if (actual_length != length) {
-//         return .{
-//             .result = false,
-//             .err = "expected tuple of length " ++ length ++ " instead got " ++ actual_length,
-//         };
-//         // @compileError("expected tuple of length " ++ length ++ " instead got " ++ actual_length);
-//     }
-
-//     return .{
-//         .result = true,
-//         .err = null,
-//     };
-// }
 
 fn MakeOpAnnotations(comptime args: anytype) EnumMap(OpCodes.Enum, OpAnnotation) {
     const ArgsType = @TypeOf(args);
