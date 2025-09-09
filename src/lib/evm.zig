@@ -191,11 +191,15 @@ pub fn New(comptime Environment: type) type {
                 return Exception.StackOverflow;
             }
 
+            const constant_fee, const dynamic_fee = try getAllCosts(self, opinfo.fee);
+            print("  gas=({d}, {d}", .{ constant_fee, dynamic_fee });
+
             // TODO: Wrap in debug conditional and only get consumeGas once.
-            print("  gas=({d}, {d}", .{ getFee(opinfo.fee.constant), getCost(self, opinfo.fee) });
+            // print("  gas=({d}, {d}", .{ getFee(opinfo.fee.constant), try getCost(self, opinfo.fee) });
 
             // Consume required gas.
-            self.gas -= try consumeGas(self, opinfo.fee);
+            // self.gas -= try consumeGas(self, opinfo.fee);
+            self.gas -= (constant_fee + dynamic_fee);
 
             // TODO: Wrap in debug conditional.
             print(", {d})\n", .{self.gas});
@@ -253,15 +257,6 @@ pub fn New(comptime Environment: type) type {
             print("{x}:{x:0>4}\u{001b}[2m{s:<5}\u{001b}[0m  \u{001b}[2m{x:0>2}\u{001b}[0m {s:<6}", .{ 0, self.pc, pc_decimal, @intFromEnum(op), @tagName(op) });
         }
 
-        inline fn getFee(fee: Fee) u64 {
-            // TODO: fee_table on the anon EVM struct so it's dynamic pricing per instance?
-            return @intCast(fee_table.get(fee).?);
-        }
-
-        fn getCost(self: *Self, cost: GasCost) u64 {
-            return if (cost.dynamic) |dfn| dfn(self) else 0;
-        }
-
         inline fn asSignedWord(value: Word) SignedWord {
             return @as(SignedWord, @bitCast(value));
         }
@@ -275,13 +270,25 @@ pub fn New(comptime Environment: type) type {
             return @as(u8, @truncate(value));
         }
 
+        fn getConstantCost(fee: Fee) u64 {
+            // TODO: fee_table on the anon EVM struct so it's dynamic pricing per instance?
+            return @intCast(fee_table.get(fee).?);
+        }
+
+        fn getDynamicCost(self: *Self, cost: GasCost) Exception!u64 {
+            return if (cost.dynamic) |dfn| try dfn(self) else 0;
+        }
+
         // XXX: Here and above inline functions, remove the `inline` keyword so the compiler can
         //      compute the optimisation itself? Benchmark/optimise.
-        inline fn consumeGas(self: *Self, cost: GasCost) !u64 {
-            var fee = getFee(cost.constant);
-            fee += getCost(self, cost);
-            if (fee > self.gas) return Exception.OutOfGas;
-            return fee;
+        fn getAllCosts(self: *Self, cost: GasCost) Exception!struct { u64, u64 } {
+            const constant_fee = getConstantCost(cost.constant);
+            const dynamic_fee = if (getDynamicCost(self, cost)) |c| c else |err| return err;
+
+            // TODO: Overflow check?
+            if ((constant_fee + dynamic_fee) > self.gas) return Exception.OutOfGas;
+
+            return .{ constant_fee, dynamic_fee };
         }
 
         pub fn execute(self: *Self, tx: Transaction) Exception!void {
@@ -300,9 +307,10 @@ pub fn New(comptime Environment: type) type {
             self.gas = tx.gas;
 
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
-            if (tx.gas < getFee(.transaction)) return Exception.OutOfGas;
+            if (tx.gas < getConstantCost(.transaction)) return Exception.OutOfGas;
 
-            self.gas -= try consumeGas(self, .{ .constant = .transaction, .dynamic = null }); // g_0 deduction (TODO: The rest per figure 64).
+            const g_0 = try getAllCosts(self, .{ .constant = .transaction, .dynamic = null }); // g_0 deduction (TODO: The rest per figure 64).
+            self.gas -= (g_0[0] + g_0[1]);
 
             // TODO: Hack for now, I imagine 'Transaction' type will change soon.
             const rom = tx.data;
@@ -725,6 +733,8 @@ pub fn New(comptime Environment: type) type {
                 },
                 .MSTORE => {
                     // s[0] = memory offset to write from ; s[1] = value to write
+
+                    // TODO 2025/09/09: Am I missing something, this writes from offset - 1, how (if it is) is this correct?
 
                     const offset = self.stack.pop().?;
                     const value = self.stack.pop().?;

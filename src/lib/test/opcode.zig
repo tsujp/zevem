@@ -598,10 +598,23 @@ test "basic MSTORE" {
     const overflow_result = basicBytecode("60ff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5200");
     try expectError(error.MemResizeUInt256Overflow, overflow_result);
 
+    // TODO: Do we want to re-enable this test and have a test configuration where the EVM is allowed infinite gas? As it stands the (modified) sut form of this test passes u64 maximum gas and we can see it correctly reports out of gas since the gas limit would hit before a ludicrous memory size change.
     // Check the temporary condition that resizing the memory to an
     // incredible value is going to fail.
-    const resize_error = basicBytecode("60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200");
-    try expectError(error.OutOfMemory, resize_error);
+    // const resize_error = basicBytecode("60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200");
+    // try expectError(error.OutOfMemory, resize_error);
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        const res = sut.evm.execute(tx(.{
+            .gas = 18446744073709551615,
+            .data = "60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200",
+        }));
+
+        // try expectError(Exception.OutOfMemory, res); // TODO
+        try expectError(Exception.OutOfGas, res);
+    }
 
     // Check overwritten memory is correctly zeroed.
     // From: https://github.com/ethereum/go-ethereum/blob/32c6aa8a1a2595cbb89b05f93440d230841f8431/core/vm/instructions_test.go#L520

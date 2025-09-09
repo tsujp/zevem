@@ -15,13 +15,16 @@ pub const fee_table = fee_map;
 
 const types = @import("types.zig");
 
+// XXX: Put Exception in types.zig?
+const Exception = @import("evm.zig").Exception;
+
 // XXX: Arguably overengineered versus just hardcoding u8 and 256.
 const OPCODE_SIZE = u8;
 const MAX_OPCODE_COUNT: comptime_int = std.math.maxInt(OPCODE_SIZE) + 1;
 
 pub const GasCost = struct {
     constant: FeeSchedule,
-    dynamic: ?*const fn (self: *EVM) u64,
+    dynamic: ?*const fn (self: *EVM) Exception!u64,
 };
 
 // Instructions can have constant gas prices associated with them and/or dynamic gas prices associated with them.
@@ -438,7 +441,7 @@ fn stackOffTop(self: *EVM, index: u10) types.Word {
     return self.stack.get(self.stack.len - index - 1);
 }
 
-fn gasEXP(self: *EVM) u64 {
+fn gasEXP(self: *EVM) Exception!u64 {
     // TODO: What happens if there's nothing at the index though? Model this after `.pop` on BoundedArray? Or custom data structure later?
     const exponent = self.stack.get(self.stack.len - 2);
 
@@ -446,31 +449,34 @@ fn gasEXP(self: *EVM) u64 {
     return fee_table.get(.expbyte).? * ((256 - @clz(exponent) + 7) / 8);
 }
 
-// Gas payable due to change in size of addressed memory.
+// Gas payable due to change in size of addressed memory (but specifically for MSTORE-type resizes).
 // TODO: Better doc-ish comment here.
 // TODO: Put this on MSTORE et al as their dynamic cost function, but really it's for any change in memory size. Another table for this or another way to associate to relevant opcodes? This seems fine _for now_.
 // TODO: Instead of another tuple element on MakeOpCodes, going to call the memory expansion function required by an opcodes dynamic gas calculation from within the latter. This means it's not easy to change at runtime but a bunch of stuff is going to probably need to be changed for easier enacting of that anyway so _for now_ this is fine and beats adding another element to comptime construct as recently done for dynamic gas.
-
 // This is specifically memory expansions of the form: max(μ_i, ceil((μ_s[0] + 32) ÷ 32)) as
 //   found on opcodes like MSTORE.
-fn gasMemory(self: *EVM) u64 {
-    _ = self;
+/// TODO: Doc comment for this function (how it's not the general M but specific to MSTORE and some specific friends).
+fn gasMemory(self: *EVM) Exception!u64 {
     // In all usage cases of this memory expansion type:
-    //   s[0] = memory offset to write from (i.e. an address in EVM memory μ_i).
+    //   s[0] = memory offset to write from (i.e. an address in EVM memory μ_m).
 
-    // const before_size = self.mem.items.len;
-    // const after_size = stackOffTop(self, 0) + 32;
-    // const ceiled = @divFloor(after_size - 1, 32) + 1;
-    // const sum_thing = @addWithOverflow(stackOffTop(self, 0), 32);
-    // const wat = @divFloor(sum_thing[0] - 1, 32) + 1;
+    // TODO 2025/09/09: since we check for overflow here, should we remove such checks from the
+    //                  relevant opcode's implementation (e.g. the @addWithOverflow in MSTORE)?
 
-    // if (sum_thing[1] == 1) {
-    //     return error.MemResizeUInt256Overflow;
-    // }
-    // std.debug.print("BEFORE={d}, AFTER={d}, CEIL={d}, SUM_THING={any}, WAT={any}\n", .{ before_size, after_size, ceiled, sum_thing, wat });
-    // @max(self.mem.items.len);
-    // const thing = @addWithOverflow(self.stack.get(self.stack.len - 1))
-    return 0;
+    const u_i__before = self.mem.items.len;
+    const new_max_address = @addWithOverflow(stackOffTop(self, 0), 32);
+    const u_i__after = @divFloor(new_max_address[0] - 1, 32) + 1;
+
+    // TODO 2025/09/09: the logging here should (ideally) be with the rest in nextOp but it's easier to put it here for now. A generic-ish "change in memory size" logging should be made later.
+    // This would appear before `gas=` on the same line as the opcode name.
+    print("  memory_size=({d}, {d}, {d})", .{ u_i__before, u_i__after, new_max_address[0] });
+
+    if (new_max_address[1] == 1) {
+        return Exception.MemResizeUInt256Overflow;
+    }
+
+    // Treating as as u64, all the while that's true just truncate here since we'll hit out of gas later anyway.
+    return @truncate(@max(u_i__before, u_i__after));
 }
 
 // TODO: Only pub export this in debug build.
