@@ -191,7 +191,11 @@ pub fn New(comptime Environment: type) type {
                 return Exception.StackOverflow;
             }
 
-            const constant_fee, const dynamic_fee = try getAllCosts(self, opinfo.fee);
+            const expanded_memory_size = if (opinfo.memory) |mfn| try mfn(self) else 0;
+
+            // TODO: Get expanded memory size within getAllCosts instead?
+            const constant_fee, const dynamic_fee = try getAllCosts(self, opinfo.fee, expanded_memory_size);
+
             print("  gas=({d}, {d}", .{ constant_fee, dynamic_fee });
 
             // TODO: Wrap in debug conditional and only get consumeGas once.
@@ -275,15 +279,15 @@ pub fn New(comptime Environment: type) type {
             return @intCast(fee_table.get(fee).?);
         }
 
-        fn getDynamicCost(self: *Self, cost: GasCost) Exception!u64 {
-            return if (cost.dynamic) |dfn| try dfn(self) else 0;
+        fn getDynamicCost(self: *Self, cost: GasCost, memory_size: u64) Exception!u64 {
+            return if (cost.dynamic) |dfn| try dfn(self, memory_size) else 0;
         }
 
         // XXX: Here and above inline functions, remove the `inline` keyword so the compiler can
         //      compute the optimisation itself? Benchmark/optimise.
-        fn getAllCosts(self: *Self, cost: GasCost) Exception!struct { u64, u64 } {
+        fn getAllCosts(self: *Self, cost: GasCost, memory_size: u64) Exception!struct { u64, u64 } {
             const constant_fee = getConstantCost(cost.constant);
-            const dynamic_fee = if (getDynamicCost(self, cost)) |c| c else |err| return err;
+            const dynamic_fee = if (getDynamicCost(self, cost, memory_size)) |c| c else |err| return err;
 
             // TODO: Overflow check?
             if ((constant_fee + dynamic_fee) > self.gas) return Exception.OutOfGas;
@@ -309,7 +313,7 @@ pub fn New(comptime Environment: type) type {
             // TODO: The rest of the upfront gas cost per figure 64 of YP.
             if (tx.gas < getConstantCost(.transaction)) return Exception.OutOfGas;
 
-            const g_0 = try getAllCosts(self, .{ .constant = .transaction, .dynamic = null }); // g_0 deduction (TODO: The rest per figure 64).
+            const g_0 = try getAllCosts(self, .{ .constant = .transaction, .dynamic = null }, 0); // g_0 deduction (TODO: The rest per figure 64).
             self.gas -= (g_0[0] + g_0[1]);
 
             // TODO: Hack for now, I imagine 'Transaction' type will change soon.

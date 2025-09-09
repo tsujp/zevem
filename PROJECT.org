@@ -40,12 +40,21 @@ CLOCK: [2025-08-24 Mon 18:30]--[2025-08-25 Mon 00:47] =>  6:17
 
 C_mem(μ_i′) - C_mem(μ_i)
 
+***** Comptime memory size
+:LOGBOOK:
+CLOCK: [2025-09-09 Tue 19:03]--[2025-09-09 Tue 21:07] =>  2:04
+- Got actual dynamic gas (based on simpler memory size changes) actually working (correctness in terms of the price it reports to be tested still).
+CLOCK: [2025-09-09 Tue 17:06]--[2025-09-09 Tue 18:32] =>  1:26
+- Basic comptime function generation for memory size functions MVP.
+:END:
+
+Define memory size function for an opcode in the comptime MakeOpCodes tuple.
+
 ***** MSTORE
 :LOGBOOK:
 CLOCK: [2025-09-09 Tue 14:37]--[2025-09-09 Tue 17:01] =>  2:24
 - Re-aqainting myself with gas charging again; implement hardcoded dynamic gas cost for MSTORE. This will need to be made generic essentially immediately.
 :END:
-
 
 *** Misc
 

@@ -24,7 +24,7 @@ const MAX_OPCODE_COUNT: comptime_int = std.math.maxInt(OPCODE_SIZE) + 1;
 
 pub const GasCost = struct {
     constant: FeeSchedule,
-    dynamic: ?*const fn (self: *EVM) Exception!u64,
+    dynamic: ?*const fn (self: *EVM, maximum_memory_size: u64) Exception!u64,
 };
 
 // Instructions can have constant gas prices associated with them and/or dynamic gas prices associated with them.
@@ -127,6 +127,8 @@ const fee_map = EnumMap(FeeSchedule, u16).init(.{
 const OpInfo = struct {
     // TODO: There are opcodes which have complex gas calculation functions so we should allow either a FeeSchedule or a pointer to a function that implements the gas cost computation as a value here.
     fee: GasCost,
+    // Memory sizing function (if any).
+    memory: ?*const fn (self: *EVM) Exception!u64,
     // Delta: stack items to be removed.
     delta: u5,
     // Alpha: stack items to be added.
@@ -232,7 +234,11 @@ const OpCodes = MakeOpCodes(.{
 
     .{ .POP, .{0x50}, .base, null, 1, 0 },
     .{ .MLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
-    .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0 },
+    // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0 },
+    // .{ .MSTORE, .{}, .{ .verylow, gasMemory }, 2, 0 }, // use this form but commented for now
+    // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0, simpleMemoryExpansion(.{0}, 32) },
+    .{ .MSTORE, .{}, .verylow, gasSimpleMemory, 2, 0, simpleMemorySize(.{0}, 32) },
+    // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0, simpleMemoryExpansion(0, .{ 2 }) },
     .{ .MSTORE8, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
     .{ .SLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
     .{ .SSTORE, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
@@ -324,6 +330,7 @@ fn makeOpInfo(comptime args: anytype, comptime override: ?struct { ?comptime_int
             .constant = args[2],
             .dynamic = args[3],
         },
+        .memory = if (args.len == 7) args[6] else null,
         .delta = d_final,
         .alpha = a_final,
     };
@@ -441,7 +448,9 @@ fn stackOffTop(self: *EVM, index: u10) types.Word {
     return self.stack.get(self.stack.len - index - 1);
 }
 
-fn gasEXP(self: *EVM) Exception!u64 {
+fn gasEXP(self: *EVM, u_i__expanded: u64) Exception!u64 {
+    _ = u_i__expanded;
+
     // TODO: What happens if there's nothing at the index though? Model this after `.pop` on BoundedArray? Or custom data structure later?
     const exponent = self.stack.get(self.stack.len - 2);
 
@@ -455,28 +464,24 @@ fn gasEXP(self: *EVM) Exception!u64 {
 // TODO: Instead of another tuple element on MakeOpCodes, going to call the memory expansion function required by an opcodes dynamic gas calculation from within the latter. This means it's not easy to change at runtime but a bunch of stuff is going to probably need to be changed for easier enacting of that anyway so _for now_ this is fine and beats adding another element to comptime construct as recently done for dynamic gas.
 // This is specifically memory expansions of the form: max(μ_i, ceil((μ_s[0] + 32) ÷ 32)) as
 //   found on opcodes like MSTORE.
+// TODO: Better name?
 /// TODO: Doc comment for this function (how it's not the general M but specific to MSTORE and some specific friends).
-fn gasMemory(self: *EVM) Exception!u64 {
-    // In all usage cases of this memory expansion type:
-    //   s[0] = memory offset to write from (i.e. an address in EVM memory μ_m).
-
+// TODO: Is it items or size? For a rename of `u_i__expanded` to say `expanded_memory_items`.
+fn gasSimpleMemory(self: *EVM, u_i__expanded: u64) Exception!u64 {
     // TODO 2025/09/09: since we check for overflow here, should we remove such checks from the
     //                  relevant opcode's implementation (e.g. the @addWithOverflow in MSTORE)?
 
-    const u_i__before = self.mem.items.len;
-    const new_max_address = @addWithOverflow(stackOffTop(self, 0), 32);
-    const u_i__after = @divFloor(new_max_address[0] - 1, 32) + 1;
+    const u_i__current = self.mem.items.len;
+    const u_i__change = u_i__expanded - u_i__current;
 
-    // TODO 2025/09/09: the logging here should (ideally) be with the rest in nextOp but it's easier to put it here for now. A generic-ish "change in memory size" logging should be made later.
-    // This would appear before `gas=` on the same line as the opcode name.
-    print("  memory_size=({d}, {d}, {d})", .{ u_i__before, u_i__after, new_max_address[0] });
-
-    if (new_max_address[1] == 1) {
-        return Exception.MemResizeUInt256Overflow;
+    // 0x1FFFFFFFE0 yoinked from Geth when trying to optimise ludicrous change deltas near u64 max.
+    if (u_i__change > 0x1FFFFFFFE0) {
+        return Exception.OutOfGas;
     }
 
-    // Treating as as u64, all the while that's true just truncate here since we'll hit out of gas later anyway.
-    return @truncate(@max(u_i__before, u_i__after));
+    const cost = (3 * u_i__change) + @divFloor(u_i__change * u_i__change, 512);
+
+    return cost;
 }
 
 // TODO: Only pub export this in debug build.
@@ -686,4 +691,72 @@ fn MakeOpAnnotations(comptime args: anytype) EnumMap(OpCodes.Enum, OpAnnotation)
     }
 
     return op_map;
+}
+
+// Concrete M (TODO: reference where M is defined in yellow paper).
+
+// TODO: Better name?
+fn getMemorySizeChange(s: types.Word, f: types.Word, l: types.Word) Exception!u64 {
+    const u_i__before = s;
+    const new_max_address = @addWithOverflow(f, l);
+    const u_i__after = @divFloor(new_max_address[0] - 1, 32) + 1;
+
+    // TODO 2025/09/09: the logging here should (ideally) be with the rest in nextOp but it's easier to put it here for now. A generic-ish "change in memory size" logging should be made later.
+    // This would appear before `gas=` on the same line as the opcode name.
+    print("  mem_words=({d}, {d})  mem_bytes=({d}, {})", .{ u_i__before, u_i__after, new_max_address[0], new_max_address[1] == 1 });
+
+    if (new_max_address[1] == 1) {
+        return Exception.MemResizeUInt256Overflow;
+    }
+
+    // Treating as as u64, all the while that's true just truncate here since we'll hit out of gas later anyway.
+    return @truncate(@max(s, u_i__after));
+    // const res: u64 = @truncate(@max(s, u_i__after));
+    // print("calculateMemoryCost s={d}, f={d}, l={d} -- {d}, {d}, {d} -- {d}\n", .{ s, f, l, u_i__before, u_i__after, new_max_address[0], res });
+    // return res;
+}
+
+// TODO: Doc comment here about how this is for simpler memory expansion forms such as those for MSTORE, MLOAD, RETURN, REVERT, KECCAK256 etc as on paper note FOO123. Mention how parameter names f and l are from memory-expansion function M from yellow paper.
+// XXX: Could use union instead if needed.
+fn simpleMemorySize(f: struct { u10 }, l: anytype) fn (self: *EVM) Exception!u64 {
+    // Implicit (and thus not accepted as a parameter) first argument s to M of μ_i.
+    // const u_i__current = self.mem.items.len;
+
+    // Indices are taken as tuples of single u10 integers since array literals like `[0]` are not
+    //   a thing.
+
+    // Argument f to M can always be taken as an index because f isn't used any other way.
+    // Argument l to M should be either an integer, in which case it's used as an offset length
+    //   from f, or an index to the stack item which defines that offset length.
+
+    return struct {
+        pub fn call(self: *EVM) Exception!u64 {
+            const f_stack_index = stackOffTop(self, f[0]);
+
+            const l_reified = blk: switch (@typeInfo(@TypeOf(l))) {
+                // Hardcoded integer length, e.g. 32 as in MSTORE's: μ_s[0] + 32
+                .comptime_int => {
+                    break :blk l;
+                },
+                // Length taken from stack item at index, e.g. 1 as in RETURN's: μ_s[0] + μ_s[1]
+                .@"struct" => |l_type_info| {
+                    // Don't need to check l[0] >= std.math.maxInt(u10), Zig does it for us.
+                    if (!(l_type_info.is_tuple == true or l_type_info.fields.len == 1)) {
+                        @compileError("memory size: expected tuple of single u10, got " ++ l_type_info);
+                    }
+
+                    break :blk stackOffTop(self, l[0]);
+                },
+                else => {
+                    @compileError("memory size: TODO BETTER ERROR, but bad data");
+                },
+            };
+
+            return getMemorySizeChange(self.mem.items.len, f_stack_index, l_reified);
+
+            // const res = f_stack_index + l_reified;
+            // std.debug.print("DONE: {any}\n", .{l_reified});
+            // return res;
+        }
+    }.call;
 }
