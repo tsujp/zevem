@@ -1,5 +1,5 @@
 #+TODO: TODO(t@) BLOCK(b@) | DONE(d!)
-#+STARTUP: indent logdone logdrawer content
+#+STARTUP: indent logdone logdrawer content lognoteclock-out
 # ------------------------------------------------------
 #+TITLE: Project Planning: zevem
 #+AUTHOR: Jordan Ellis Coppard
@@ -10,6 +10,8 @@
 
 ** Project Focus
 Current area of focus so I don't forget what I was doing.
+
+2025/09/11 TODO: Could use org-agenda to collect the requisite headlines instead of enforcing a literal structure (by having them all under here). Yak shave that later.
 
 *** TODO Message Call
 
