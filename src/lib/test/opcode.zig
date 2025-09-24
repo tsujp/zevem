@@ -625,6 +625,12 @@ test "basic MSTORE" {
     try expectEqual(1, std.mem.readInt(u256, overwrites.mem.items[0..32], .big));
 }
 
+test "basic JUMP" {
+    // TODO
+    // const a = try basicBytecode("60105600");
+    return error.SkipZigTest;
+}
+
 test "basic JUMPDEST" {
     // TODO
     return error.SkipZigTest;

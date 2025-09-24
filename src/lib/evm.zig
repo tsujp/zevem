@@ -764,7 +764,17 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 // TODO: Spit as appropriate when implementing.
-                .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS => {
+                .MSTORE8, .SLOAD, .SSTORE => {
+                    return error.NotImplemented;
+                },
+                .JUMP => {
+                    // s[0] = new program counter value
+                    // self.pc = self.stack.get(self.stack.len - 1);
+
+                    // continue :sw try self.nextOp(rom);
+                    return error.NotImplemented;
+                },
+                .JUMPI, .PC, .MSIZE, .GAS => {
                     // TODO: Implement.
                     // TODO: Dynamic gas pricing.
                     return error.NotImplemented;

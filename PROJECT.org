@@ -18,6 +18,17 @@ Current area of focus so I don't forget what I was doing.
 TODO: Finish refreshing myself on what I need to catch up on here.
 
 ** Implementation
+*** Opcodes
+**** JUMP
+:LOGBOOK:
+CLOCK: [2025-09-24 Wed 18:46]--[2025-09-24 Wed 19:08] =>  0:22
+- Read associated YP information, need to implement JUMPDEST too and some more logic according to 9.4.3 so will do this later.
+:END:
+
+What if it wants to set a program counter above u64?
+It leaves s[0] alone right?
+
+Look at (160) 9.4.3 which defines how JUMP and JUMPDEST are required to interact. Continue from there.
 
 *** Gas
 Ref: [[#h:BF533F42-7A90-4686-8AF8-5443D197FE14][YP Gas]]
