@@ -634,6 +634,25 @@ test "basic JUMP" {
     return error.SkipZigTest;
 }
 
+test "basic JUMPI" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic PC" {
+    var a01 = try basicBytecode("58");
+    try expectEqual(a01.stack.pop(), 0);
+
+    var a02 = try basicBytecode("585800");
+    try expectEqual(a02.stack.pop(), 1);
+
+    var b01 = try basicBytecode("63010203045800");
+    try expectEqual(b01.stack.pop(), 5);
+
+    var c01 = try basicBytecode("630000000856fefe5b58");
+    try expectEqual(c01.stack.pop(), 9);
+}
+
 // JUMP, JUMPI, and JUMPDEST are co-dependent but we'll attempt to atomically test (as best we
 //   can) anyway.
 test "basic JUMPDEST" {

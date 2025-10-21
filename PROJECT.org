@@ -55,6 +55,18 @@ What if it wants to set a program counter above u64?
 
 Look at (160) 9.4.3 which defines how JUMP and JUMPDEST are required to interact. Continue from there.
 
+**** PC
+:LOGBOOK:
+CLOCK: [2025-10-21 Tue 19:11]--[2025-10-21 Tue 19:27] =>  0:16
+- Add PC with basic tests
+:END:
+
+***** TODO Is the PC prior or the current PC?
+:LOGBOOK:
+- State "TODO"       from              [2025-10-21 Tue 19:11]
+:END:
+Yellow-paper says _prior_ but (small) experimentation suggests _current_? Going with current for now, need to check this later.
+
 *** Gas
 Ref: [[#h:BF533F42-7A90-4686-8AF8-5443D197FE14][YP Gas]]
 

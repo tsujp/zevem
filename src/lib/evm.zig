@@ -825,7 +825,9 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .PC => {
-                    return error.NotImplemented;
+                    try self.stack.append(self.pc - 1);
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .MSIZE, .GAS => {
                     // TODO: Implement.
