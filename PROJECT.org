@@ -21,12 +21,37 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 *** Opcodes
 **** JUMP
 :LOGBOOK:
+CLOCK: [2025-10-21 Tue 17:18]--[2025-10-21 Tue 19:04] =>  1:46
+- JUMP/JUMPDEST implemented with basic tests. DynamicBitSetUnmanaged to pre-scan and construct bitset of valid JUMPDEST locations.
+CLOCK: [2025-09-24 Wed 22:14]--[2025-09-24 Wed 22:58] =>  0:44
+- More reading on JUMP and friends, yep we gotta do all the validation ourselves. Oh boy.
 CLOCK: [2025-09-24 Wed 18:46]--[2025-09-24 Wed 19:08] =>  0:22
 - Read associated YP information, need to implement JUMPDEST too and some more logic according to 9.4.3 so will do this later.
 :END:
 
+(9.4.3) Function D determines set of valid jump destinations. To be valid:
+
+1. Position must be occupied by a JUMPDEST instruction.
+2. JUMPDEST must not reside within data portion of any PUSH.
+3. Must appear within explicitly defined bytecode, and not the implicit infinite STOP padding.
+
+Zig bit sets look good for this: https://ziglang.org/documentation/0.14.1/std/#std.bit_set
+
+Not possible to know bytecode length at comptime, could set an upperbound but would require re-compiling if block gas limits change to allow more bytecode to be executed so DynamicBitSetUnmanaged from stdlib looks like a good pre-provided data structure for this.
+
+***** TODO Is it our job (as zevem) to assert 2 and 3? That would require ahead of time scanning the entire bytecode to execute or checking left-right of JUMPDEST to see if it resides within any PUSH (at every such call)
+:LOGBOOK:
+- State "TODO"       from              [2025-09-24 Wed 22:24] \\
+  If we need to do these checks it can get complicated
+:END:
+
+YES IT'S OUR JOB
+
+Q: Do we have to analyse ahead of time or can we do it as we go and revert then and there? Potential issues perhaps? Do the ahead of time first since it's simpler for now. I think we will have to since there's no guarantee all of the bytecode will be explored so trying to determine during runtime (and not ahead of time) if a JUMPDEST is actually a JUMPDEST and not a byte in the data portion of a PUSH will be quite hard and cost more computationally than looking at all of the bytecode and creating a bitmask. Benchmark later, this seems like a hyper-optimisation.
+
+
+
 What if it wants to set a program counter above u64?
-It leaves s[0] alone right?
 
 Look at (160) 9.4.3 which defines how JUMP and JUMPDEST are required to interact. Continue from there.
 

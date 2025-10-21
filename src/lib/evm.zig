@@ -3,6 +3,8 @@ const print = std.debug.print;
 const builtin = @import("builtin");
 const native_endian = builtin.cpu.arch.endian();
 
+const DynamicBitSetUnmanaged = std.bit_set.DynamicBitSetUnmanaged;
+
 // TODO: FalsePattern's zig-tracy no-ops its functions if we don't enable it, but also check our own usage is no-op'd when not in-use.
 const tracy = @import("tracy");
 
@@ -65,6 +67,7 @@ pub const Exception = error{
     InvalidOp,
     Revert,
     OutOfGas,
+    InvalidJumpDestination,
     // XXX: Following are just to shut Zig up for now.
     Overflow, // For: try self.stack.append(self.stack.pop().? +% self.stack.pop().?);
     NotImplemented,
@@ -318,6 +321,45 @@ pub fn New(comptime Environment: type) type {
 
             // TODO: Hack for now, I imagine 'Transaction' type will change soon.
             const rom = tx.data;
+
+            // FIXME: For now fine but see Implementation>Opcodes>JUMP (YP: 9.4.3) we will scan
+            //        all of the rom ahead of time and construct a bitmask of valid JUMPDEST
+            //        locations which are not within the data portion of any PUSH.
+            // FIXME: As I was implementing this I realised we could have an upper bound of u64
+            //        since that's what we type the program counter to.. could change to a
+            //        simple u64 instead of DynamicBitSetUnmanaged?
+            var valid_jumpdests = try DynamicBitSetUnmanaged.initEmpty(self.alloc, rom.len);
+            defer valid_jumpdests.deinit(self.alloc);
+
+            // FIXME: Need to pre-scan all bytecode to mark valid JUMPDESTs, unsure if this is
+            //        optimisable (halting problem?).
+            // FIXME: Better type for length?
+            var jdst_pc: usize = 0;
+            while (jdst_pc < rom.len) : (jdst_pc += 1) {
+                // print("\nidx: {} looking at: {} -- ", .{ jdst_pc, rom[jdst_pc]});
+                // const _op = std.meta.intToEnum(OpCode, rom[jdst_pc]) catch return Exception.InvalidOp;
+                switch (rom[jdst_pc]) {
+                    @intFromEnum(OpCode.JUMPDEST) => {
+                        // Valid JUMPDEST, mark.
+                        valid_jumpdests.set(jdst_pc);
+                    },
+                    @intFromEnum(OpCode.PUSH1)...@intFromEnum(OpCode.PUSH32) => |op| {
+                        // Skip forward by operand size, same as in main labelled switch.
+                        const offset = op - @intFromEnum(OpCode.PUSH0);
+                        // print("PUSH, skip forward: {} ", .{ offset });
+                        jdst_pc += offset;
+                    },
+                    else => continue,
+                }
+            }
+
+            // TODO: Wrap in debug conditional.
+            var _iter = valid_jumpdests.iterator(.{});
+            print("valid jumpdests ({}):", .{valid_jumpdests.count()});
+            while (_iter.next()) |b| {
+                print(" {}", .{b});
+            }
+            print("\n", .{});
 
             // TODO: Would expect the compiler to pass rom to nextOp as a pointer.
             // print("rom_ptr={*}, rom_ptr_len={*}\n", .{ &rom, &rom.len });
@@ -769,12 +811,23 @@ pub fn New(comptime Environment: type) type {
                 },
                 .JUMP => {
                     // s[0] = new program counter value
-                    // self.pc = self.stack.get(self.stack.len - 1);
+                    const new_pc: @TypeOf(self.pc) = @intCast(self.stack.pop().?);
 
-                    // continue :sw try self.nextOp(rom);
+                    if (valid_jumpdests.isSet(new_pc) == false) {
+                        return Exception.InvalidJumpDestination;
+                    }
+
+                    self.pc = new_pc;
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .JUMPI => {
                     return error.NotImplemented;
                 },
-                .JUMPI, .PC, .MSIZE, .GAS => {
+                .PC => {
+                    return error.NotImplemented;
+                },
+                .MSIZE, .GAS => {
                     // TODO: Implement.
                     // TODO: Dynamic gas pricing.
                     return error.NotImplemented;

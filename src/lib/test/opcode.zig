@@ -627,13 +627,30 @@ test "basic MSTORE" {
 
 test "basic JUMP" {
     // TODO
+
+    // No JUMPDEST marked, so this is invalid.
     // const a = try basicBytecode("60105600");
+
     return error.SkipZigTest;
 }
 
+// JUMP, JUMPI, and JUMPDEST are co-dependent but we'll attempt to atomically test (as best we
+//   can) anyway.
 test "basic JUMPDEST" {
-    // TODO
-    return error.SkipZigTest;
+    // Simple JUMPDEST at 0x05 in bytecode, prefixed in INVALID. So, jumping will only be valid
+    //   if we PUSH the correct offset (0x05) and that address is populated with JUMPDEST.
+    var a = try basicBytecode("600556fefe5b601000");
+    try expectEqual(a.stack.pop(), 16);
+
+    // PUSH 0x06 and attempt to JUMP. Except, while that address is populated with a JUMPDEST
+    //   it's actually the data portion of the subsequent PUSH8 and so not valid.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        const res = sut.executeBasic("600656675b5b5b5b5b5b5b5b00");
+        try expectError(Exception.InvalidJumpDestination, res);
+    }
 }
 
 // TODO: Add super, super basic tests for PUSH0 .. PUSH32. Basically just one scenario per PUSHN because they are used in essentially every other test.
