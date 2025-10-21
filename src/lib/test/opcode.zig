@@ -628,7 +628,7 @@ test "basic MSTORE" {
 test "basic JUMP" {
     // JUMP jumps over INVALID opcode.
     var a01 = try basicBytecode("600556fefe5b5800");
-    try expectEqual(a01.stack.pop(), 6);
+    try expectEqual(6, a01.stack.pop());
 }
 
 test "basic JUMPI" {
@@ -644,21 +644,62 @@ test "basic JUMPI" {
 
     // True JUMPI condition jumps over INVALID opcode.
     var a02 = try basicBytecode("6001600757fefe5b5800");
-    try expectEqual(a02.stack.pop(), 8);
+    try expectEqual(8, a02.stack.pop());
 }
 
 test "basic PC" {
     var a01 = try basicBytecode("5800");
-    try expectEqual(a01.stack.pop(), 0);
+    try expectEqual(0, a01.stack.pop());
 
     var a02 = try basicBytecode("585800");
-    try expectEqual(a02.stack.pop(), 1);
+    try expectEqual(1, a02.stack.pop());
 
     var b01 = try basicBytecode("63010203045800");
-    try expectEqual(b01.stack.pop(), 5);
+    try expectEqual(5, b01.stack.pop());
 
     var c01 = try basicBytecode("630000000856fefe5b5800");
-    try expectEqual(c01.stack.pop(), 9);
+    try expectEqual(9, c01.stack.pop());
+}
+
+test "basic MSIZE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic GAS" {
+    // Just the GAS opcode.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        _ = try sut.evm.execute(tx(.{
+            .gas = 100_000,
+            .data = "5a00",
+        }));
+
+        try expectEqual(sut.evm.gas, sut.evm.stack.pop());
+    }
+
+    // An ADD before GAS, and an ADD followed by POP afterwards leaving GAS' prior value at the
+    //   top of the stack (and we used gas afterwards).
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        _ = try sut.evm.execute(tx(.{
+            .gas = 100_000,
+            .data = "60026004015a600860160150",
+        }));
+
+        // TODO: Use the enum for the pricing i.e. verylow, low etc.
+
+        // At current pricing PUSH1, PUSH1, and ADD (called before GAS) amount to: 3 + 3 + 3 = 9
+        //   as well as GAS' cost of 2 = 11 less than the provided gas limit, and G_transaction.
+        try expectEqual(100_000 - 21_000 - 11, sut.evm.stack.pop());
+
+        // And the final gas consumed will be 22.
+        try expectEqual(100_000 - 21_000 - 22, sut.evm.gas);
+    }
 }
 
 // JUMP, JUMPI, and JUMPDEST are co-dependent but we'll attempt to atomically test (as best we
@@ -667,7 +708,7 @@ test "basic JUMPDEST" {
     // Simple JUMPDEST at 0x05 in bytecode, prefixed in INVALID. So, jumping will only be valid
     //   if we PUSH the correct offset (0x05) and that address is populated with JUMPDEST.
     var a01 = try basicBytecode("600556fefe5b601000");
-    try expectEqual(a01.stack.pop(), 16);
+    try expectEqual(16, a01.stack.pop());
 
     // PUSH 0x06 and attempt to JUMP. Except, while that address is populated with a JUMPDEST
     //   it's actually the data portion of the subsequent PUSH8 and so not valid.
@@ -683,7 +724,7 @@ test "basic JUMPDEST" {
     //   counter value which points to a non-JUMPDEST because it's never set, and so is not an
     //   error.
     var b01 = try basicBytecode("6000600857635b5b5b5b00");
-    try expectEqual(b01.stack.pop(), 0x5b5b5b5b);
+    try expectEqual(0x5b5b5b5b, b01.stack.pop());
 
     // If we do the same as before but set the JUMPI condition to true, and attempt to jump to an
     //   invalid JUMPDEST it should now error.

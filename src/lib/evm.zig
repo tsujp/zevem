@@ -842,10 +842,14 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw try self.nextOp(rom);
                 },
-                .MSIZE, .GAS => {
+                .MSIZE => {
                     // TODO: Implement.
-                    // TODO: Dynamic gas pricing.
                     return error.NotImplemented;
+                },
+                .GAS => {
+                    try self.stack.append(self.gas);
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .JUMPDEST => {
                     // Does nothing, is a metadata opcode to mark JUMP/JUMPI targets.
@@ -859,7 +863,6 @@ pub fn New(comptime Environment: type) type {
                     // TODO: gas pricing and notes from eip-5656
                     return error.NotImplemented;
                 },
-                // TODO: MSTORE8 to MCOPY
                 .PUSH0 => {
                     try self.stack.append(0);
 

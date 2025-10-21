@@ -503,6 +503,7 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{.JUMP}, .{ .{"addr"}, .{} } },
     .{ .{.JUMPI}, .{ .{ "addr", "cond" }, .{} } },
     .{ .{.PC}, .{ .{}, .{"pc"} } },
+    .{ .{.GAS}, .{ .{}, .{"gas"} } },
     .{ .{.PUSH0}, .{ .{}, .{"constant"} } },
     .{ .{ 32, .PUSH }, .{ .{}, .{"bytes"} } },
     .{ .{ 16, .DUP }, .{ .{.{ incrFrom(1), .DUP1, "duped" }}, .{"to"} } },
