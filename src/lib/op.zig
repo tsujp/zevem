@@ -500,6 +500,9 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
     .{ .{.POP}, .{ .{"discard"}, .{} } },
     .{ .{.MSTORE}, .{ .{ "offset", "value" }, .{} } },
+    .{ .{.JUMP}, .{ .{"addr"}, .{} } },
+    .{ .{.JUMPI}, .{ .{ "addr", "cond" }, .{} } },
+    .{ .{.PC}, .{ .{}, .{"pc"} } },
     .{ .{.PUSH0}, .{ .{}, .{"constant"} } },
     .{ .{ 32, .PUSH }, .{ .{}, .{"bytes"} } },
     .{ .{ 16, .DUP }, .{ .{.{ incrFrom(1), .DUP1, "duped" }}, .{"to"} } },
@@ -614,6 +617,8 @@ fn isNullTerminatedSlice(comptime args: anytype) bool {
 }
 
 fn MakeOpAnnotations(comptime args: anytype) EnumMap(OpCodes.Enum, OpAnnotation) {
+    @setEvalBranchQuota(10_000);
+
     const ArgsType = @TypeOf(args);
     const args_type_info = @typeInfo(ArgsType);
 
