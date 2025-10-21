@@ -822,7 +822,20 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .JUMPI => {
-                    return error.NotImplemented;
+                    // s[0] = potential new program counter value ; s[1] = check condition
+                    const new_pc: @TypeOf(self.pc) = @intCast(self.stack.pop().?);
+                    const condition = self.stack.pop().?;
+
+                    // Non-zero condition = set new program counter.
+                    if (condition > 0) {
+                        if (valid_jumpdests.isSet(new_pc) == false) {
+                            return Exception.InvalidJumpDestination;
+                        }
+
+                        self.pc = new_pc;
+                    }
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .PC => {
                     try self.stack.append(self.pc - 1);
@@ -950,7 +963,9 @@ pub fn New(comptime Environment: type) type {
                     // TODO: Instead of nextOp returning error.InvalidOpCode it should set the opcode to .INVALID as spec says this opcode is executed upon its literal encounter or any other invalid opcode.
                     // TODO: Consume all remaining gas.
                     // TODO: State revert to before given bytecode executed.
-                    return error.NotImplemented;
+
+                    // TODO: Still needs more to finish implementation I think.
+                    return Exception.InvalidOp;
                 },
                 .SELFDESTRUCT => {
                     // TODO: Implement.

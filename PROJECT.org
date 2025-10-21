@@ -49,11 +49,16 @@ YES IT'S OUR JOB
 
 Q: Do we have to analyse ahead of time or can we do it as we go and revert then and there? Potential issues perhaps? Do the ahead of time first since it's simpler for now. I think we will have to since there's no guarantee all of the bytecode will be explored so trying to determine during runtime (and not ahead of time) if a JUMPDEST is actually a JUMPDEST and not a byte in the data portion of a PUSH will be quite hard and cost more computationally than looking at all of the bytecode and creating a bitmask. Benchmark later, this seems like a hyper-optimisation.
 
-
-
 What if it wants to set a program counter above u64?
 
 Look at (160) 9.4.3 which defines how JUMP and JUMPDEST are required to interact. Continue from there.
+
+**** JUMPI
+:LOGBOOK:
+CLOCK: [2025-10-21 Tue 19:32]--[2025-10-21 Tue 20:02] =>  0:30
+- Add JUMPI with basic tests
+:END:
+
 
 **** PC
 :LOGBOOK:

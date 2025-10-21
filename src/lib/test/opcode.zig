@@ -626,21 +626,29 @@ test "basic MSTORE" {
 }
 
 test "basic JUMP" {
-    // TODO
-
-    // No JUMPDEST marked, so this is invalid.
-    // const a = try basicBytecode("60105600");
-
-    return error.SkipZigTest;
+    // JUMP jumps over INVALID opcode.
+    var a01 = try basicBytecode("600556fefe5b5800");
+    try expectEqual(a01.stack.pop(), 6);
 }
 
 test "basic JUMPI" {
-    // TODO
-    return error.SkipZigTest;
+    // False JUMPI condition (correctly) fails to jump over INVALID opcode, showing that a
+    //   false condition simply increments the PC by 1.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        const res = sut.executeBasic("6000600757fefe5b5800");
+        try expectError(Exception.InvalidOp, res);
+    }
+
+    // True JUMPI condition jumps over INVALID opcode.
+    var a02 = try basicBytecode("6001600757fefe5b5800");
+    try expectEqual(a02.stack.pop(), 8);
 }
 
 test "basic PC" {
-    var a01 = try basicBytecode("58");
+    var a01 = try basicBytecode("5800");
     try expectEqual(a01.stack.pop(), 0);
 
     var a02 = try basicBytecode("585800");
@@ -649,7 +657,7 @@ test "basic PC" {
     var b01 = try basicBytecode("63010203045800");
     try expectEqual(b01.stack.pop(), 5);
 
-    var c01 = try basicBytecode("630000000856fefe5b58");
+    var c01 = try basicBytecode("630000000856fefe5b5800");
     try expectEqual(c01.stack.pop(), 9);
 }
 
@@ -658,8 +666,8 @@ test "basic PC" {
 test "basic JUMPDEST" {
     // Simple JUMPDEST at 0x05 in bytecode, prefixed in INVALID. So, jumping will only be valid
     //   if we PUSH the correct offset (0x05) and that address is populated with JUMPDEST.
-    var a = try basicBytecode("600556fefe5b601000");
-    try expectEqual(a.stack.pop(), 16);
+    var a01 = try basicBytecode("600556fefe5b601000");
+    try expectEqual(a01.stack.pop(), 16);
 
     // PUSH 0x06 and attempt to JUMP. Except, while that address is populated with a JUMPDEST
     //   it's actually the data portion of the subsequent PUSH8 and so not valid.
@@ -668,6 +676,22 @@ test "basic JUMPDEST" {
         defer sut.deinit();
 
         const res = sut.executeBasic("600656675b5b5b5b5b5b5b5b00");
+        try expectError(Exception.InvalidJumpDestination, res);
+    }
+
+    // JUMPI whose condition is false (and so won't set the new program counter) can have a program
+    //   counter value which points to a non-JUMPDEST because it's never set, and so is not an
+    //   error.
+    var b01 = try basicBytecode("6000600857635b5b5b5b00");
+    try expectEqual(b01.stack.pop(), 0x5b5b5b5b);
+
+    // If we do the same as before but set the JUMPI condition to true, and attempt to jump to an
+    //   invalid JUMPDEST it should now error.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        const res = sut.executeBasic("6001600857635b5b5b5b00");
         try expectError(Exception.InvalidJumpDestination, res);
     }
 }
