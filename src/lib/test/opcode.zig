@@ -686,6 +686,59 @@ test "basic MSTORE" {
     try expectEqual(1, std.mem.readInt(u256, overwrites.mem.items[0..32], .big));
 }
 
+test "basic MSTORE8" {
+    // Both arguments to MSTORE8 are zero.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        const res = sut.executeBasic("5f5f5300");
+        try expectEqual({}, res);
+        try expectEqual(0, sut.evm.stack.len);
+        try expectEqual(32, sut.evm.mem.items.len); // Smallest possible memory size.
+        for (0..32) |i| {
+            try expectEqual(0, sut.evm.mem.items[i]); // All memory items are zero.
+        }
+        printMemory(sut.evm.mem);
+    }
+
+    // Offset zero, with an already byte-sized value.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        const res = sut.executeBasic("60ff5f5300");
+        try expectEqual({}, res);
+        try expectEqual(0, sut.evm.stack.len);
+        try expectEqual(32, sut.evm.mem.items.len); // Smallest possible memory size.
+        try expectEqual(0xff, sut.evm.mem.items[0]); // Index 0 is 0xff.
+        for (1..32) |i| {
+            try expectEqual(0, sut.evm.mem.items[i]); // Remaining memory items are zero.
+        }
+        printMemory(sut.evm.mem);
+    }
+
+    // Offset 14, with a 4-byte value (which will undergo modulo 256).
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        const res = sut.executeBasic("63cafebabe600e5300");
+        try expectEqual({}, res);
+        try expectEqual(0, sut.evm.stack.len);
+        try expectEqual(32, sut.evm.mem.items.len); // Smallest possible memory size.
+        for (0..13) |i| {
+            try expectEqual(0, sut.evm.mem.items[i]); // Indices 0 to 13 are zeroed.
+        }
+        // At index 14 is our 1-byte 256 modulo value which for 0xcafebabe is 190 decimal.
+        try expectEqual(190, sut.evm.mem.items[14]);
+        for (15..32) |i| {
+            try expectEqual(0, sut.evm.mem.items[i]); // Remaining memory items are zero.
+        }
+        printMemory(sut.evm.mem);
+    }
+}
+
 test "basic JUMP" {
     // JUMP jumps over INVALID opcode.
     var a01 = try basicBytecode("600556fefe5b5800");

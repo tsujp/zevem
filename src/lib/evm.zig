@@ -798,9 +798,7 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .MSTORE => {
-                    // s[0] = memory offset to write from ; s[1] = value to write
-
-                    // TODO 2025/09/09: Am I missing something, this writes from offset - 1, how (if it is) is this correct?
+                    // s[0] = memory offset to write to ; s[1] = value to write
 
                     const offset = self.stack.pop().?;
                     const value = self.stack.pop().?;
@@ -825,8 +823,38 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw try self.nextOp(rom);
                 },
-                // TODO: Spit as appropriate when implementing.
-                .MSTORE8, .SLOAD, .SSTORE => {
+                .MSTORE8 => {
+                    // s[0] = memory address to write to ; s[1] = value mod 256 to write
+
+                    const offset = self.stack.pop().?;
+                    const value_raw = self.stack.pop().?;
+
+                    // TODO: Replace '256' with bitsize of Word (which is 256, for 'better' config?)
+                    const value_mod: u8 = @intCast(if (value_raw == 0) 0 else (value_raw % 256));
+
+                    const u_i__before = self.mem.items.len;
+                    const new_max_address = @addWithOverflow(offset, 1);
+
+                    if (new_max_address[1] == 1) {
+                        return Exception.MemResizeUInt256Overflow;
+                    }
+
+                    std.debug.print("B NEW {d} {d}\n", .{ u_i__before, new_max_address[0] });
+
+                    if (@as(Word, u_i__before) < new_max_address[0]) {
+                        // Next multiple of 32.
+                        const u_i__after: usize = @intCast(32 * (@divFloor(new_max_address[0] - 1, 32) + 1));
+                        std.debug.print("NEW MAX {d}\n", .{u_i__after});
+                        try self.mem.resize(self.alloc, u_i__after);
+                        @memset(self.mem.items[u_i__before..@truncate(u_i__after)], 0);
+                    }
+
+                    std.mem.writeInt(u8, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 1)]), value_mod, .big);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .SLOAD, .SSTORE => {
+                    // TODO
                     return error.NotImplemented;
                 },
                 .JUMP => {

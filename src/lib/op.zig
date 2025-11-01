@@ -188,6 +188,7 @@ const OpCodes = MakeOpCodes(.{
 
     // //////////////////////////////////////////
     // /////// 20s: KECCAK256
+    // KECCAK256 should be something like simpleMemorySize(.{0}, .{1})
     .{ .KECCAK256, .{0x20}, .TODO_CUSTOM_FEE, null, 2, 1 }, // Compute KECCAK-256 hash.
 
     // UNUSED: 0x21 ... 0x2F
@@ -233,14 +234,13 @@ const OpCodes = MakeOpCodes(.{
     // /////// 50s: Stack, Memory, Storage and Flow Operations
 
     .{ .POP, .{0x50}, .base, null, 1, 0 },
-    // TODO: I forgot what simpleMemorySize does...
     .{ .MLOAD, .{}, .verylow, gasSimpleMemory, 1, 1, simpleMemorySize(.{0}, 32) },
     // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0 },
     // .{ .MSTORE, .{}, .{ .verylow, gasMemory }, 2, 0 }, // use this form but commented for now
     // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0, simpleMemoryExpansion(.{0}, 32) },
     .{ .MSTORE, .{}, .verylow, gasSimpleMemory, 2, 0, simpleMemorySize(.{0}, 32) },
     // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0, simpleMemoryExpansion(0, .{ 2 }) },
-    .{ .MSTORE8, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
+    .{ .MSTORE8, .{}, .verylow, gasSimpleMemory, 2, 0, simpleMemorySize(.{0}, 1) },
     .{ .SLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
     .{ .SSTORE, .{}, .TODO_CUSTOM_FEE, null, 2, 0 },
     .{ .JUMP, .{}, .mid, null, 1, 0 },
@@ -501,7 +501,7 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
     .{ .{.POP}, .{ .{"discard"}, .{} } },
     .{ .{.MLOAD}, .{ .{"offset"}, .{"bytes"} } },
-    .{ .{.MSTORE}, .{ .{ "offset", "value" }, .{} } },
+    .{ .{ .MSTORE, .MSTORE8 }, .{ .{ "offset", "value" }, .{} } },
     .{ .{.JUMP}, .{ .{"addr"}, .{} } },
     .{ .{.JUMPI}, .{ .{ "addr", "cond" }, .{} } },
     .{ .{.PC}, .{ .{}, .{"pc"} } },

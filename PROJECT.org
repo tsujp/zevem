@@ -20,6 +20,8 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-11-02 Sun 03:05]--[2025-11-02 Sun 03:41] =>  0:36
+- Add MSTORE8 with basic tests
 CLOCK: [2025-11-02 Sun 02:27]--[2025-11-02 Sun 02:59] =>  0:32
 - Add basic MLOAD with basic tests
 CLOCK: [2025-11-02 Sun 00:52]--[2025-11-02 Sun 01:47] =>  0:55
