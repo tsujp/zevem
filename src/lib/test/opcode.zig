@@ -580,6 +580,67 @@ fn printMemory(mem: std.ArrayListUnmanaged(u8)) void {
     }
 }
 
+test "basic MLOAD" {
+    // Simple load without "weird" offset, and no memory resizing.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        // Manually set memory contents and (correct) memory size.
+        try sut.evm.mem.resize(sut.evm.alloc, 32);
+        std.mem.writeInt(u256, @ptrCast(sut.evm.mem.items[0..32]), 0xcafe, .big);
+        printMemory(sut.evm.mem);
+
+        // MLOAD from offset 0, effectively reading back the same value we set.
+        const res = sut.executeBasic("5f5100");
+        try expectEqual({}, res);
+        try expectEqual(1, sut.evm.stack.len);
+        try expectEqual(0xcafe, sut.evm.stack.pop());
+        try expectEqual(32, sut.evm.mem.items.len); // No memory resizing.
+    }
+
+    // Simple load with a small offset, so memory will be resized and the value read back different.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        // Manually set memory contents and (correct) memory size.
+        try sut.evm.mem.resize(sut.evm.alloc, 32);
+        std.mem.writeInt(u256, @ptrCast(sut.evm.mem.items[0..32]), 0xcafe, .big);
+        printMemory(sut.evm.mem);
+
+        // MLOAD from offset 2 (bytes), effectively adding 2 bytes to the end of our initial value.
+        const res = sut.executeBasic("60025100");
+        try expectEqual({}, res);
+        try expectEqual(1, sut.evm.stack.len);
+        try expectEqual(0xcafe0000, sut.evm.stack.pop());
+        try expectEqual(64, sut.evm.mem.items.len); // Small offset, so incremented one word (32 bytes).
+        printMemory(sut.evm.mem);
+    }
+
+    // Simple load with large offset, large words, and no memory resizing.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        // Manually set memory contents and (correct) memory size.
+        try sut.evm.mem.resize(sut.evm.alloc, 64);
+        std.mem.writeInt(u256, @ptrCast(sut.evm.mem.items[0..32]), 90000, .big);
+        std.mem.writeInt(u256, @ptrCast(sut.evm.mem.items[32..64]), 0x00cafebabe001234567800101000ffabc00222200666600333300001111fcafe, .big);
+        printMemory(sut.evm.mem);
+
+        // MLOAD from offset 30 (i.e. the 31st byte).
+        const res = sut.executeBasic("601e5100");
+        try expectEqual({}, res);
+        try expectEqual(1, sut.evm.stack.len);
+        try expectEqual(0x5f9000cafebabe001234567800101000ffabc00222200666600333300001111f, sut.evm.stack.pop());
+        try expectEqual(64, sut.evm.mem.items.len); // Memory not resized.
+        printMemory(sut.evm.mem);
+    }
+
+    // TODO: Test memory resizing relating to MLOAD.
+}
+
 test "basic MSTORE" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process.
     const vm1 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff5200");

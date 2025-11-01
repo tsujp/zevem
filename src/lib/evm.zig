@@ -774,8 +774,28 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .MLOAD => {
-                    // TODO
-                    return error.NotImplemented;
+                    // s[0] = memory offset to read from
+
+                    const offset = self.stack.pop().?;
+
+                    // TODO: Factor this out to something common?
+                    const u_i__before = self.mem.items.len;
+                    const new_max_address = @addWithOverflow(offset, 32);
+
+                    if (new_max_address[1] == 1) {
+                        return Exception.MemResizeUInt256Overflow;
+                    }
+
+                    if (@as(Word, u_i__before) < new_max_address[0]) {
+                        // Next multiple of 32.
+                        const u_i__after: usize = @intCast(32 * (@divFloor(new_max_address[0] - 1, 32) + 1));
+                        try self.mem.resize(self.alloc, u_i__after);
+                        @memset(self.mem.items[u_i__before..@truncate(u_i__after)], 0);
+                    }
+
+                    try self.stack.append(std.mem.readInt(Word, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), .big));
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .MSTORE => {
                     // s[0] = memory offset to write from ; s[1] = value to write

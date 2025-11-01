@@ -233,7 +233,8 @@ const OpCodes = MakeOpCodes(.{
     // /////// 50s: Stack, Memory, Storage and Flow Operations
 
     .{ .POP, .{0x50}, .base, null, 1, 0 },
-    .{ .MLOAD, .{}, .TODO_CUSTOM_FEE, null, 1, 1 },
+    // TODO: I forgot what simpleMemorySize does...
+    .{ .MLOAD, .{}, .verylow, gasSimpleMemory, 1, 1, simpleMemorySize(.{0}, 32) },
     // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0 },
     // .{ .MSTORE, .{}, .{ .verylow, gasMemory }, 2, 0 }, // use this form but commented for now
     // .{ .MSTORE, .{}, .verylow, gasMemory, 2, 0, simpleMemoryExpansion(.{0}, 32) },
@@ -475,7 +476,7 @@ fn gasSimpleMemory(self: *EVM, u_i__expanded: u64) Exception!u64 {
     const u_i__change = u_i__expanded - u_i__current;
 
     // 0x1FFFFFFFE0 yoinked from Geth when trying to optimise ludicrous change deltas near u64 max.
-    if (u_i__change > 0x1FFFFFFFE0) {
+    if (u_i__change > 0x1fffffffe0) {
         return Exception.OutOfGas;
     }
 
@@ -499,6 +500,7 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{.BYTE}, .{ .{ "msb_offset", "operand" }, .{"result"} } },
     .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
     .{ .{.POP}, .{ .{"discard"}, .{} } },
+    .{ .{.MLOAD}, .{ .{"offset"}, .{"bytes"} } },
     .{ .{.MSTORE}, .{ .{ "offset", "value" }, .{} } },
     .{ .{.JUMP}, .{ .{"addr"}, .{} } },
     .{ .{.JUMPI}, .{ .{ "addr", "cond" }, .{} } },
@@ -708,6 +710,10 @@ fn getMemorySizeChange(s: types.Word, f: types.Word, l: types.Word) Exception!u6
     const u_i__after = @divFloor(new_max_address[0] - 1, 32) + 1;
 
     // TODO 2025/09/09: the logging here should (ideally) be with the rest in nextOp but it's easier to put it here for now. A generic-ish "change in memory size" logging should be made later.
+    // TODO 2025/11/02: The logging for this i.e. u_i__after is.. weird? e.g. =(32, 2) I cannot remember.
+    // e.g. 0:0001(1)    51 MLOAD   mem_words=(32, 1)  mem_bytes=(32, false)  gas=(3, 0, 78995)
+    //      0:0002(2)    51 MLOAD   mem_words=(32, 2)  mem_bytes=(34, false)  gas=(3, 0, 78994)
+    // relook at how this is logged
     // This would appear before `gas=` on the same line as the opcode name.
     print("  mem_words=({d}, {d})  mem_bytes=({d}, {})", .{ u_i__before, u_i__after, new_max_address[0], new_max_address[1] == 1 });
 

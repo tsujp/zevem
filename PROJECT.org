@@ -20,6 +20,10 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-11-02 Sun 02:27]--[2025-11-02 Sun 02:59] =>  0:32
+- Add basic MLOAD with basic tests
+CLOCK: [2025-11-02 Sun 00:52]--[2025-11-02 Sun 01:47] =>  0:55
+- Part of MLOAD, need to get laundry right now though.
 CLOCK: [2025-10-21 Tue 20:25]--[2025-10-21 Tue 20:50] =>  0:25
 - Add GAS with tests, also correct argument ordering for recent JUMP, JUMPI, PC in expectEqual tests.
 CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
