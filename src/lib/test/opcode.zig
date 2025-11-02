@@ -520,8 +520,57 @@ test "basic SAR" {
 }
 
 test "basic KECCAK256" {
-    // TODO
-    return error.SkipZigTest;
+    // Hash over the bytes "cafebabe", no offset.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        // Manually set memory contents and size.
+        try sut.evm.mem.resize(sut.evm.alloc, 32);
+        std.mem.writeInt(u256, @ptrCast(sut.evm.mem.items[0..32]), 0xcafebabe << 224, .big);
+        printMemory(sut.evm.mem);
+
+        // We've manually set memory so we only need to push the offset, and length then call
+        //   the KECCAK256 opcode.
+        const res = sut.executeBasic("60045f2000");
+        try expectEqual({}, res);
+        try expectEqual(1, sut.evm.stack.len);
+        try expectEqual(32, sut.evm.mem.items.len); // Smallest possible memory size.
+
+        try std.testing.expectEqualSlices(
+            u8,
+            &utils.htb("6fe2683bd1d27cbb7a05c570693bea39e0c082ed16722e5ecadcfb7cfdbd20db"),
+            &wordAsBytes(sut.evm.stack.pop().?),
+            // &@as([32]u8, @bitCast(sut.evm.stack.pop().?)),
+        );
+    }
+
+    // Hash over empty input bytes as offset and length are both zero.
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        // Manually set memory contents and size.
+        try sut.evm.mem.resize(sut.evm.alloc, 32);
+        std.mem.writeInt(u256, @ptrCast(sut.evm.mem.items[0..32]), 0, .big);
+        printMemory(sut.evm.mem);
+
+        // We've manually set memory so we only need to push the offset, and length then call
+        //   the KECCAK256 opcode.
+        const res = sut.executeBasic("5f5f2000");
+        try expectEqual({}, res);
+        try expectEqual(1, sut.evm.stack.len);
+        try expectEqual(32, sut.evm.mem.items.len); // Smallest possible memory size.
+
+        try std.testing.expectEqualSlices(
+            u8,
+            &utils.htb("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+            &wordAsBytes(sut.evm.stack.pop().?),
+        );
+    }
+
+    // TODO: A test case that uses MSTORE instead of us manually setting up memory.
+    // TODO: Gas test.
 }
 
 test "basic BALANCE" {
@@ -581,6 +630,8 @@ fn printMemory(mem: std.ArrayListUnmanaged(u8)) void {
 }
 
 test "basic MLOAD" {
+    // TODO: Gas test.
+
     // Simple load without "weird" offset, and no memory resizing.
     {
         var sut: Sut = try .init(.{});
@@ -642,6 +693,8 @@ test "basic MLOAD" {
 }
 
 test "basic MSTORE" {
+    // TODO: Gas test.
+
     // Store 0xff..ff at 0xff, expanding the memory size in the process.
     const vm1 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff5200");
     try expectEqual(0, vm1.stack.len);
@@ -687,6 +740,8 @@ test "basic MSTORE" {
 }
 
 test "basic MSTORE8" {
+    // TODO: Gas test.
+
     // Both arguments to MSTORE8 are zero.
     {
         var sut: Sut = try .init(.{});
@@ -976,4 +1031,13 @@ test "out of bounds bytecode STOP" {
     var impl = try basicBytecode("6001600201");
     try expectEqual(1, impl.stack.len);
     try expectEqual(3, impl.stack.pop());
+}
+
+// Hacky and temporary (famous last words) from KECCAK256 to check two hash digests are equal
+//   but if they aren't print the bytes not them as a number.
+// TODO: Could probably do a better function as part of a custom test runner output.
+// fn expectEqualBytes()
+fn wordAsBytes(word: u256) [32]u8 {
+    const the_bytes: [32]u8 = @bitCast(std.mem.nativeToBig(u256, word));
+    return the_bytes;
 }

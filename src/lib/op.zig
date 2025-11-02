@@ -189,7 +189,14 @@ const OpCodes = MakeOpCodes(.{
     // //////////////////////////////////////////
     // /////// 20s: KECCAK256
     // KECCAK256 should be something like simpleMemorySize(.{0}, .{1})
-    .{ .KECCAK256, .{0x20}, .TODO_CUSTOM_FEE, null, 2, 1 }, // Compute KECCAK-256 hash.
+    // TODO: 2025/11/02 so in general is the current gas specification here fine? At current
+    //       hindsight for KECCAK I have to do something like put G_keccak256 as the constant
+    //       and then a function for the G_keccak256word stuff (see the gas cost schedule 326)
+    //       or I could set the constant to 0 and have the G_keccak256 added to the G_keccak256word
+    //       as it's literally written in 326. Both approaches work, might be overthiking this. The
+    //       former feels fine, since G_keccak256word is paid for each additional (rouned up) word
+    //       of input to the hash function.
+    .{ .KECCAK256, .{0x20}, .keccak256, gasKECCAK256, 2, 1, simpleMemorySize(.{0}, .{1}) }, // Compute KECCAK-256 hash.
 
     // UNUSED: 0x21 ... 0x2F
 
@@ -459,6 +466,20 @@ fn gasEXP(self: *EVM, u_i__expanded: u64) Exception!u64 {
     return fee_table.get(.expbyte).? * ((256 - @clz(exponent) + 7) / 8);
 }
 
+/// KECCAK256 gas cost function for (326), specifically the additional word component.
+fn gasKECCAK256(self: *EVM, u_i__expanded: u64) Exception!u64 {
+    _ = u_i__expanded;
+    // std.debug.print("gasKECCAK256 u_i expanded: {d}\n", .{u_i__expanded});
+
+    // KECCAK256 s[1].
+    const length: u64 = @intCast(stackOffTop(self, 1));
+
+    if (length == 0) return 0;
+
+    // Each word (rounded-up) of input data to KECCAK256.
+    return fee_table.get(.keccak256word).? * (@divFloor(length - 1, 32) + 1);
+}
+
 // Gas payable due to change in size of addressed memory (but specifically for MSTORE-type resizes).
 // TODO: Better doc-ish comment here.
 // TODO: Put this on MSTORE et al as their dynamic cost function, but really it's for any change in memory size. Another table for this or another way to associate to relevant opcodes? This seems fine _for now_.
@@ -468,6 +489,7 @@ fn gasEXP(self: *EVM, u_i__expanded: u64) Exception!u64 {
 // TODO: Better name?
 /// TODO: Doc comment for this function (how it's not the general M but specific to MSTORE and some specific friends).
 // TODO: Is it items or size? For a rename of `u_i__expanded` to say `expanded_memory_items`.
+// TODO: 2025/11/02 actually this is C_mem right so it's general???????????
 fn gasSimpleMemory(self: *EVM, u_i__expanded: u64) Exception!u64 {
     // TODO 2025/09/09: since we check for overflow here, should we remove such checks from the
     //                  relevant opcode's implementation (e.g. the @addWithOverflow in MSTORE)?
@@ -499,6 +521,7 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{ .ISZERO, .NOT }, .{ .{"a"}, .{"result"} } },
     .{ .{.BYTE}, .{ .{ "msb_offset", "operand" }, .{"result"} } },
     .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
+    .{ .{.KECCAK256}, .{ .{ "offset", "length" }, .{"digest"} } },
     .{ .{.POP}, .{ .{"discard"}, .{} } },
     .{ .{.MLOAD}, .{ .{"offset"}, .{"bytes"} } },
     .{ .{ .MSTORE, .MSTORE8 }, .{ .{ "offset", "value" }, .{} } },
@@ -701,19 +724,35 @@ fn MakeOpAnnotations(comptime args: anytype) EnumMap(OpCodes.Enum, OpAnnotation)
     return op_map;
 }
 
-// Concrete M (TODO: reference where M is defined in yellow paper).
-
 // TODO: Better name?
+/// Memory-expansion (330, pg.30) computes new μ_i (active number of words in machine memory)
+///   given s, f, l. Where `s` is the current/before/existing μ_i ; `f` is some base number to
+///   offset which ; `l` is a length added to f.
 fn getMemorySizeChange(s: types.Word, f: types.Word, l: types.Word) Exception!u64 {
+    if (l == 0) return @intCast(s);
+
     const u_i__before = s;
     const new_max_address = @addWithOverflow(f, l);
     const u_i__after = @divFloor(new_max_address[0] - 1, 32) + 1;
+
+    // Use of M (when l is not zero) simplifies to the common form of custom μ_i found on opcodes
+    //   like MSTORE. Thus we can use this function for all memory expansion cases.
+    // TODO: List the various forms per the physical notes on FOO123 paper.
+
+    // TODO: Perhaps call this function from within opcode bodies instead of copy-pasting memory
+    //       expansion everywhere. In general just clean up the flow with this and simpleMemorySize
+    //       gasSimpleMemory. I believe I correctly/cleanly separated the concerns here but the
+    //       similar function names, and duplicated logic within opcode implementations is slightly
+    //       confusing. So this general area is low-hanging fruit for cleanup.
+    // TODO: Also re-check how these functions are called, it's currently tied to the gas stuff but
+    //       we need the sizing for opcodes that must set new u_i so we should be able to access
+    //       this value (without having to run the function or equivalent logic more than once)
+    //       in opcode bodies that need it, like MSTORE etc (see FOO123) for complete list.
 
     // TODO 2025/09/09: the logging here should (ideally) be with the rest in nextOp but it's easier to put it here for now. A generic-ish "change in memory size" logging should be made later.
     // TODO 2025/11/02: The logging for this i.e. u_i__after is.. weird? e.g. =(32, 2) I cannot remember.
     // e.g. 0:0001(1)    51 MLOAD   mem_words=(32, 1)  mem_bytes=(32, false)  gas=(3, 0, 78995)
     //      0:0002(2)    51 MLOAD   mem_words=(32, 2)  mem_bytes=(34, false)  gas=(3, 0, 78994)
-    // relook at how this is logged
     // This would appear before `gas=` on the same line as the opcode name.
     print("  mem_words=({d}, {d})  mem_bytes=({d}, {})", .{ u_i__before, u_i__after, new_max_address[0], new_max_address[1] == 1 });
 

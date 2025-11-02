@@ -701,7 +701,26 @@ pub fn New(comptime Environment: type) type {
                 },
                 .KECCAK256 => {
                     // TODO: Check zig stdlib or other packages. Also since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
-                    return error.NotImplemented;
+
+                    // FIXME: Two intCasts to usize for std.mem.items slice, problem or not?
+                    const offset: usize = @intCast(self.stack.pop().?);
+                    const length: usize = @intCast(self.stack.pop().?);
+
+                    // TODO: Memory expansion.
+
+                    // TODO: Hash directly into the stack instead of this intermediate variables?
+                    var digest = [_]u8{0} ** 32;
+
+                    std.crypto.hash.sha3.Keccak256.hash(
+                        // Note: The `- 1` in YP is wrong.
+                        @ptrCast(self.mem.items[offset..(offset + length)]),
+                        &digest,
+                        .{},
+                    );
+
+                    try self.stack.append(std.mem.readInt(Word, &digest, .big));
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .ADDRESS => {
                     // TODO
