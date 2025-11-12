@@ -875,8 +875,9 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .MSIZE => {
-                    // TODO: Implement.
-                    return error.NotImplemented;
+                    try self.stack.append(self.mem.items.len);
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .GAS => {
                     try self.stack.append(self.gas);

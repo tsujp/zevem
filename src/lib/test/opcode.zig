@@ -845,8 +845,19 @@ test "basic PC" {
 }
 
 test "basic MSIZE" {
-    // TODO
-    return error.SkipZigTest;
+    // TODO: Gas tests.
+    // TODO: More complicated tests?
+
+    // Nothing but MSIZE opcode, no addressed memory at all, should be zero.
+    var a01 = try basicBytecode("5900");
+    try expectEqual(0, a01.stack.pop());
+    try expectEqual(0, a01.mem.items.len);
+
+    // MSTORE some data such that memory should be 2 words, or 64-bytes.
+    var a02 = try basicBytecode("63cafebabe6020525900");
+    printMemory(a02.mem);
+    try expectEqual(64, a02.stack.pop());
+    try expectEqual(64, a02.mem.items.len);
 }
 
 test "basic GAS" {
