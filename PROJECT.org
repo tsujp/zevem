@@ -20,6 +20,8 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-11-12 Wed 23:54]--[2025-11-13 Thu 01:40] =>  1:46
+- Refactor memory resizing to nextOp, adapt MSTORE tests, add KECCAK test for memory resizing
 CLOCK: [2025-11-02 Sun 16:16]--[2025-11-02 Sun 19:53] =>  3:37
 - KECCAK256 and surrounding utilities with many sanity checks along the way
 CLOCK: [2025-11-02 Sun 03:05]--[2025-11-02 Sun 03:41] =>  0:36

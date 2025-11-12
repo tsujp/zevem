@@ -494,7 +494,8 @@ fn gasSimpleMemory(self: *EVM, u_i__expanded: u64) Exception!u64 {
     // TODO 2025/09/09: since we check for overflow here, should we remove such checks from the
     //                  relevant opcode's implementation (e.g. the @addWithOverflow in MSTORE)?
 
-    const u_i__current = self.mem.items.len;
+    // 32 bytes in a Word (u256).
+    const u_i__current = self.mem.items.len / 32;
     const u_i__change = u_i__expanded - u_i__current;
 
     // 0x1FFFFFFFE0 yoinked from Geth when trying to optimise ludicrous change deltas near u64 max.
@@ -754,7 +755,10 @@ fn getMemorySizeChange(s: types.Word, f: types.Word, l: types.Word) Exception!u6
     // e.g. 0:0001(1)    51 MLOAD   mem_words=(32, 1)  mem_bytes=(32, false)  gas=(3, 0, 78995)
     //      0:0002(2)    51 MLOAD   mem_words=(32, 2)  mem_bytes=(34, false)  gas=(3, 0, 78994)
     // This would appear before `gas=` on the same line as the opcode name.
-    print("  mem_words=({d}, {d})  mem_bytes=({d}, {})", .{ u_i__before, u_i__after, new_max_address[0], new_max_address[1] == 1 });
+    // TODO: This should log the next multiple of 32 for mem_bytes, i.e.
+    //                         // Next multiple of 32.
+    // const u_i__after: usize = @intCast(32 * (@divFloor(new_max_address[0] - 1, 32) + 1));
+    print("  mem_words=({d}, {d})  mem_bytes=({d}, unaligned={d}, overflow={})", .{ u_i__before, u_i__after, u_i__after * 32, new_max_address[0], new_max_address[1] == 1 });
 
     if (new_max_address[1] == 1) {
         return Exception.MemResizeUInt256Overflow;
@@ -803,7 +807,7 @@ fn simpleMemorySize(f: struct { u10 }, l: anytype) fn (self: *EVM) Exception!u64
                 },
             };
 
-            return getMemorySizeChange(self.mem.items.len, f_stack_index, l_reified);
+            return getMemorySizeChange(self.mem.items.len / 32, f_stack_index, l_reified);
 
             // const res = f_stack_index + l_reified;
             // std.debug.print("DONE: {any}\n", .{l_reified});

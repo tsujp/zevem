@@ -520,6 +520,8 @@ test "basic SAR" {
 }
 
 test "basic KECCAK256" {
+    // TODO: Gas test.
+
     // Hash over the bytes "cafebabe", no offset.
     {
         var sut: Sut = try .init(.{});
@@ -569,8 +571,18 @@ test "basic KECCAK256" {
         );
     }
 
-    // TODO: A test case that uses MSTORE instead of us manually setting up memory.
-    // TODO: Gas test.
+    // Hash over bytes that result in a memory resize, and use MSTORE to set up initial memory.
+    // Hash: cafebabe00000000000000000000000000000000000000000000000000000000
+    // Digest: 19b37ef47ae8e61211537fd93aa507187945b974da325ba02f7864dea756920c
+    var a = try basicBytecode("63cafebabe6000526020601c20");
+    printMemory(a.mem);
+    try expectEqual(1, a.stack.len);
+    try expectEqual(64, a.mem.items.len); // Memory resized to 2 words, or 64-bytes.
+    try std.testing.expectEqualSlices(
+        u8,
+        &utils.htb("19b37ef47ae8e61211537fd93aa507187945b974da325ba02f7864dea756920c"),
+        &wordAsBytes(a.stack.pop().?),
+    );
 }
 
 test "basic BALANCE" {
@@ -612,8 +624,11 @@ test "basic POP" {
 }
 
 // TODO: Put elsewhere, fine here (for now).
+// TODO: Header row offsets also, currently only full word offsets at the start of each row.
 fn printMemory(mem: std.ArrayListUnmanaged(u8)) void {
     const print = std.debug.print;
+
+    print("[MEMORY DUMP]\nwords={d}  bytes={d}\n", .{ mem.items.len / 32, mem.items.len });
 
     var it = std.mem.window(u8, mem.items, 32, 32);
     while (it.next()) |word| {
@@ -698,9 +713,8 @@ test "basic MSTORE" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process.
     const vm1 = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff5200");
     try expectEqual(0, vm1.stack.len);
-    std.debug.print("vm.mem.items = {any}\n", .{vm1.mem.items.len});
     printMemory(vm1.mem);
-    try expectEqual(255 + 32, vm1.mem.items.len);
+    try expectEqual(256 + 32, vm1.mem.items.len);
     for (0..0xff) |i| {
         try expectEqual(0, vm1.mem.items[i]);
     }
@@ -733,9 +747,9 @@ test "basic MSTORE" {
     // Check overwritten memory is correctly zeroed.
     // From: https://github.com/ethereum/go-ethereum/blob/32c6aa8a1a2595cbb89b05f93440d230841f8431/core/vm/instructions_test.go#L520
     const overwrites = try basicBytecode("7fabcdef00000000000000abba000000000deaf000000c0de001000000001337005f5260015f5200");
+    printMemory(overwrites.mem);
     try expectEqual(0, overwrites.stack.len);
     try expectEqual(32, overwrites.mem.items.len);
-    printMemory(overwrites.mem);
     try expectEqual(1, std.mem.readInt(u256, overwrites.mem.items[0..32], .big));
 }
 

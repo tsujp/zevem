@@ -125,7 +125,7 @@ pub fn New(comptime Environment: type) type {
         /// Remaining gas available for executing transaction: T_g
         gas: u64,
 
-        /// Machine state: μ_m, for which μ_i is it's length.
+        /// Machine state: μ_m, for which 32μ_i is it's length, i.e. length is _bytes_.
         mem: std.ArrayListUnmanaged(u8),
 
         alloc: std.mem.Allocator,
@@ -194,10 +194,10 @@ pub fn New(comptime Environment: type) type {
                 return Exception.StackOverflow;
             }
 
-            const expanded_memory_size = if (opinfo.memory) |mfn| try mfn(self) else 0;
+            const expanded_memory_words = if (opinfo.memory) |mfn| try mfn(self) else 0;
 
             // TODO: Get expanded memory size within getAllCosts instead?
-            const constant_fee, const dynamic_fee = try getAllCosts(self, opinfo.fee, expanded_memory_size);
+            const constant_fee, const dynamic_fee = try getAllCosts(self, opinfo.fee, expanded_memory_words);
 
             print("  gas=({d}, {d}", .{ constant_fee, dynamic_fee });
 
@@ -210,6 +210,17 @@ pub fn New(comptime Environment: type) type {
 
             // TODO: Wrap in debug conditional.
             print(", {d})\n", .{self.gas});
+
+            // Needs to be after getAllCosts since OutOfGas will trigger before ludicrous integer overflows.
+            const expanded_memory_bytes = 32 * expanded_memory_words;
+
+            // TODO (2025/11/13): Could likely optimise this but this is fine for now.
+            // Expand memory as required.
+            if (expanded_memory_bytes > self.mem.items.len) {
+                const current_memory_bytes = self.mem.items.len;
+                try self.mem.resize(self.alloc, expanded_memory_bytes);
+                @memset(self.mem.items[current_memory_bytes..expanded_memory_bytes], 0);
+            }
 
             // TODO: Wrap in debug conditional.
             // TODO: I forsee a problem with things like SWAP which have huge stack deltas, but
@@ -700,16 +711,18 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .KECCAK256 => {
-                    // TODO: Check zig stdlib or other packages. Also since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
+                    // s[0] = memory offset to read from ; s[1] = length to read
+
+                    // TODO: Since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
 
                     // FIXME: Two intCasts to usize for std.mem.items slice, problem or not?
                     const offset: usize = @intCast(self.stack.pop().?);
                     const length: usize = @intCast(self.stack.pop().?);
 
-                    // TODO: Memory expansion.
-
-                    // TODO: Hash directly into the stack instead of this intermediate variables?
+                    // TODO: Hash directly into the stack instead of this intermediate variable?
                     var digest = [_]u8{0} ** 32;
+
+                    // print("Hashing: {x}\n", .{                        self.mem.items[offset..(offset + length)]});
 
                     std.crypto.hash.sha3.Keccak256.hash(
                         // Note: The `- 1` in YP is wrong.
@@ -797,21 +810,6 @@ pub fn New(comptime Environment: type) type {
 
                     const offset = self.stack.pop().?;
 
-                    // TODO: Factor this out to something common?
-                    const u_i__before = self.mem.items.len;
-                    const new_max_address = @addWithOverflow(offset, 32);
-
-                    if (new_max_address[1] == 1) {
-                        return Exception.MemResizeUInt256Overflow;
-                    }
-
-                    if (@as(Word, u_i__before) < new_max_address[0]) {
-                        // Next multiple of 32.
-                        const u_i__after: usize = @intCast(32 * (@divFloor(new_max_address[0] - 1, 32) + 1));
-                        try self.mem.resize(self.alloc, u_i__after);
-                        @memset(self.mem.items[u_i__before..@truncate(u_i__after)], 0);
-                    }
-
                     try self.stack.append(std.mem.readInt(Word, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), .big));
 
                     continue :sw try self.nextOp(rom);
@@ -822,23 +820,7 @@ pub fn New(comptime Environment: type) type {
                     const offset = self.stack.pop().?;
                     const value = self.stack.pop().?;
 
-                    // print("                  [0] offset=0x{x}\n                  [1] value=0x{x}\n", .{ offset, value });
-
-                    // Resize memory if need be.
-                    // NOTE: this should incur some extra gas cost
-                    const sum_and_overflow = @addWithOverflow(offset, 32);
-                    if (sum_and_overflow[1] == 1) {
-                        return error.MemResizeUInt256Overflow;
-                    }
-                    if (@as(u256, self.mem.items.len) < sum_and_overflow[0]) {
-                        const memsize_usize: usize = @truncate(sum_and_overflow[0]);
-                        const old_size = self.mem.items.len;
-                        // GUILLAUME: Note that this will potentially OOM if the offset is too large.
-                        // This is ok, because it's meant to be capped by the gas cost.
-                        try self.mem.resize(self.alloc, memsize_usize);
-                        @memset(self.mem.items[old_size..@truncate(offset)], 0);
-                    }
-                    std.mem.writeInt(u256, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), value, .big);
+                    std.mem.writeInt(Word, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 32)]), value, .big);
 
                     continue :sw try self.nextOp(rom);
                 },
@@ -850,23 +832,6 @@ pub fn New(comptime Environment: type) type {
 
                     // TODO: Replace '256' with bitsize of Word (which is 256, for 'better' config?)
                     const value_mod: u8 = @intCast(if (value_raw == 0) 0 else (value_raw % 256));
-
-                    const u_i__before = self.mem.items.len;
-                    const new_max_address = @addWithOverflow(offset, 1);
-
-                    if (new_max_address[1] == 1) {
-                        return Exception.MemResizeUInt256Overflow;
-                    }
-
-                    std.debug.print("B NEW {d} {d}\n", .{ u_i__before, new_max_address[0] });
-
-                    if (@as(Word, u_i__before) < new_max_address[0]) {
-                        // Next multiple of 32.
-                        const u_i__after: usize = @intCast(32 * (@divFloor(new_max_address[0] - 1, 32) + 1));
-                        std.debug.print("NEW MAX {d}\n", .{u_i__after});
-                        try self.mem.resize(self.alloc, u_i__after);
-                        @memset(self.mem.items[u_i__before..@truncate(u_i__after)], 0);
-                    }
 
                     std.mem.writeInt(u8, @ptrCast(self.mem.items[@truncate(offset)..@truncate(offset + 1)]), value_mod, .big);
 
