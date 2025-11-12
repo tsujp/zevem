@@ -607,6 +607,63 @@ test "basic BALANCE" {
 //     try std.testing.expectEqualSlices(u256, &[_]u256{1234}, evm.stack.constSlice());
 // }
 
+// .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH =>
+
+test "basic BLOCKHASH" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic COINBASE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic TIMESTAMP" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic NUMBER" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic PREVRANDAO" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic GASLIMIT" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic CHAINID" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic SELFBALANCE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic BASEFEE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic BLOBHASH" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic BLOBBASEFEE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
 test "basic POP" {
     // Push 2 items, pop twice for great success!
     const a = try basicBytecode("600161cafe505000");

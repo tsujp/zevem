@@ -4,6 +4,8 @@ const types = @import("../types.zig");
 
 const BlockHeader = @This();
 
+// TODO: These need to go back to functions as they used to be a while ago.
+
 /// Current block's parent's header Keccak-256 hash: I_H_p
 parent_hash: types.Hash32,
 

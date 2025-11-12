@@ -741,6 +741,7 @@ pub fn New(comptime Environment: type) type {
                 },
                 .BALANCE => {
                     try self.stack.append(try self.env.getBalance());
+                    // TODO: Next op?
                 },
                 // TODO: Spit as appropriate when implementing.
                 .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
@@ -767,8 +768,7 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .PREVRANDAO => {
-                    // TODO: Need to decide on data representation.
-
+                    // TODO: Decide on data type.
                     return error.NotImplemented;
                     // try self.stack.append(self.env.block.randao);
 

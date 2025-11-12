@@ -20,6 +20,8 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-11-13 Thu 02:01]--[2025-11-13 Thu 02:07] =>  0:06
+- Stub out 40s opcodes
 CLOCK: [2025-11-13 Thu 01:48]--[2025-11-13 Thu 01:56] =>  0:08
 - Add MSIZE with basic tests
 CLOCK: [2025-11-12 Wed 23:54]--[2025-11-13 Thu 01:40] =>  1:46
