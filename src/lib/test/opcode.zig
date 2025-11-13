@@ -607,7 +607,26 @@ test "basic BALANCE" {
 //     try std.testing.expectEqualSlices(u256, &[_]u256{1234}, evm.stack.constSlice());
 // }
 
-// .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH =>
+test "basic ORIGIN" {
+    // TODO: Gas test.
+    // TODO: Compliated test scenario, probably nested execution with contract creation to ensure
+    //       it reports original transaction sender address only.
+
+    {
+        var sut: Sut = try .init(.{});
+        defer sut.deinit();
+
+        _ = try sut.evm.execute(tx(.{
+            .sender = 0x1234,
+            .gas = 100_000,
+            .data = "3200",
+        }));
+
+        try expectEqual(0x1234, sut.evm.stack.pop());
+    }
+}
+
+// .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH =>
 
 test "basic BLOCKHASH" {
     // TODO
@@ -793,6 +812,7 @@ test "basic MSTORE" {
         defer sut.deinit();
 
         const res = sut.evm.execute(tx(.{
+            .sender = 0,
             .gas = 18446744073709551615,
             .data = "60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200",
         }));
@@ -924,6 +944,7 @@ test "basic GAS" {
         defer sut.deinit();
 
         _ = try sut.evm.execute(tx(.{
+            .sender = 0,
             .gas = 100_000,
             .data = "5a00",
         }));
@@ -938,6 +959,7 @@ test "basic GAS" {
         defer sut.deinit();
 
         _ = try sut.evm.execute(tx(.{
+            .sender = 0,
             .gas = 100_000,
             .data = "60026004015a600860160150",
         }));

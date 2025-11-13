@@ -523,6 +523,7 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{.BYTE}, .{ .{ "msb_offset", "operand" }, .{"result"} } },
     .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
     .{ .{.KECCAK256}, .{ .{ "offset", "length" }, .{"digest"} } },
+    .{ .{.ORIGIN}, .{ .{}, .{"addr"} } },
     .{ .{.POP}, .{ .{"discard"}, .{} } },
     .{ .{.MLOAD}, .{ .{"offset"}, .{"bytes"} } },
     .{ .{ .MSTORE, .MSTORE8 }, .{ .{ "offset", "value" }, .{} } },

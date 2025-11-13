@@ -50,6 +50,7 @@ pub const Sut = struct {
         if (!builtin.is_test) @compileError("this function is for use in tests only");
 
         const txx = Transaction{
+            .sender = 0,
             .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
             .data = &htb(bytes),
         };
@@ -69,6 +70,7 @@ pub fn evmBasicBytecode(comptime bytes: []const u8) !EVM {
 
     var evm_dummy = try EVM.init(allocator, &dummyEnv);
     try evm_dummy.execute(.{
+        .sender = 0,
         .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
         .data = &htb(bytes),
     });

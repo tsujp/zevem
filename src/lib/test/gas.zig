@@ -32,6 +32,7 @@ test "basic OutOfGas" {
     defer sut.deinit();
 
     const res = sut.evm.execute(tx(.{
+        .sender = 0,
         .gas = 123,
         .data = "0100",
     }));
@@ -47,6 +48,7 @@ test "basic consumption" {
     defer sut.deinit();
 
     const res = sut.evm.execute(tx(.{
+        .sender = 0,
         .gas = 21_000,
         .data = "00",
     }));

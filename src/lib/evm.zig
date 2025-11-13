@@ -310,6 +310,8 @@ pub fn New(comptime Environment: type) type {
         }
 
         pub fn execute(self: *Self, tx: Transaction) Exception!void {
+            // TODO (2025/11/13): Likely have to put `tx` onto struct, since when we get into nested execution contexts we still need to report the correct origin (tx.sender).
+
             const zone = tracy.initZone(@src(), .{ .name = "EVM execute" });
             defer zone.deinit();
 
@@ -744,7 +746,12 @@ pub fn New(comptime Environment: type) type {
                     // TODO: Next op?
                 },
                 // TODO: Spit as appropriate when implementing.
-                .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
+                .ORIGIN => {
+                    try self.stack.append(tx.sender);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },

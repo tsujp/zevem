@@ -11,11 +11,16 @@ const Transaction = @This();
 
 // TODO: Nonce, value, r, s, etc.
 
+// T_s is a 160-bit address.
+/// Transaction's sender: T_s
+sender: types.Address,
+
 /// Transaction's gas limit: T_g
 gas: u64,
 
-// TODO: Is this actually common to all? I don't think so (double check paper notes etc).
-/// Arbitrary sized byte array of input data to message call: T_d
+// If a transaction message call it's T_d, otherwise I_d which is part of the EVM's execution
+//   environment.
+/// Arbitrary sized byte array of input data to transaction: T_d OR I_d
 data: []const u8,
 
 // pub const default: Transaction = .{

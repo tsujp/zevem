@@ -20,6 +20,8 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-11-13 Thu 21:32]--[2025-11-13 Thu 21:52] =>  0:20
+- ORIGIN with basic tests
 CLOCK: [2025-11-13 Thu 02:01]--[2025-11-13 Thu 02:07] =>  0:06
 - Stub out 40s opcodes
 CLOCK: [2025-11-13 Thu 01:48]--[2025-11-13 Thu 01:56] =>  0:08
@@ -130,6 +132,8 @@ CLOCK: [2025-09-09 Tue 14:37]--[2025-09-09 Tue 17:01] =>  2:24
 
 *** Misc
 :LOGBOOK:
+CLOCK: [2025-11-13 Thu 19:30]--[2025-11-13 Thu 21:16] =>  1:46
+- Horrible time double checking I_o for 0x32 ORIGIN and the fact that it's just T_s
 CLOCK: [2025-11-13 Thu 17:51]--[2025-11-13 Thu 19:21] =>  1:30
 - Migrate from BlockHeader struct with fields to methods on DummyEnv comptime interface
 :END:
