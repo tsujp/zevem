@@ -129,6 +129,10 @@ CLOCK: [2025-09-09 Tue 14:37]--[2025-09-09 Tue 17:01] =>  2:24
 :END:
 
 *** Misc
+:LOGBOOK:
+CLOCK: [2025-11-13 Thu 17:51]--[2025-11-13 Thu 19:21] =>  1:30
+- Migrate from BlockHeader struct with fields to methods on DummyEnv comptime interface
+:END:
 
 **** Disassembly Logging
 :LOGBOOK:
