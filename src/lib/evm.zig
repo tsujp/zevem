@@ -760,17 +760,17 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .COINBASE => {
-                    try self.stack.append(try self.env.getBlockBeneficiary());
+                    try self.stack.append(self.env.block.beneficiary);
 
                     continue :sw try self.nextOp(rom);
                 },
                 .TIMESTAMP => {
-                    try self.stack.append(try self.env.getBlockTimestamp());
+                    try self.stack.append(self.env.block.timestamp);
 
                     continue :sw try self.nextOp(rom);
                 },
                 .NUMBER => {
-                    try self.stack.append(try self.env.getBlockNumber());
+                    try self.stack.append(self.env.block.number);
 
                     continue :sw try self.nextOp(rom);
                 },
@@ -782,8 +782,7 @@ pub fn New(comptime Environment: type) type {
                     // continue :sw try self.nextOp(rom);
                 },
                 .GASLIMIT => {
-                    // try self.stack.append(self.env.block.gas_limit);
-                    try self.stack.append(try self.env.getBlockGasLimit());
+                    try self.stack.append(self.env.block.gas_limit);
 
                     continue :sw try self.nextOp(rom);
                 },
@@ -796,7 +795,7 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .BASEFEE => {
-                    try self.stack.append(try self.env.getBlockBaseFee());
+                    try self.stack.append(self.env.block.base_fee);
 
                     return error.NotImplemented;
                 },
