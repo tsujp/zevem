@@ -18,6 +18,9 @@ const types = @import("types.zig");
 // XXX: Put Exception in types.zig?
 const Exception = @import("evm.zig").Exception;
 
+// TODO: Since moving stackOffTop into utils this import feels messy?
+const stackOffTop = @import("zevem").utils.stackOffTop;
+
 // XXX: Arguably overengineered versus just hardcoding u8 and 256.
 const OPCODE_SIZE = u8;
 const MAX_OPCODE_COUNT: comptime_int = std.math.maxInt(OPCODE_SIZE) + 1;
@@ -270,7 +273,7 @@ const OpCodes = MakeOpCodes(.{
     // /////// 80s: Duplication Operations
 
     // DUP1 ... DUP16
-    .{ .DUP, .{ 0x80, 0x8F }, .verylow, null, incrFrom(1), incrFrom(2) }, // Duplicate Nth stack item (TODO: To the top of the stack?)
+    .{ .DUP, .{ 0x80, 0x8F }, .verylow, null, incrFrom(1), incrFrom(2) }, // Duplicate Nth stack item.
 
     // //////////////////////////////////////////
     // /////// 90s: Exchange Operations
@@ -451,10 +454,10 @@ const EVM = evm.New(DummyEnv);
 
 // TODO: Force inline via `inline` or let compiler figure it out? Zig `inline` has additional semantics beyond just inlining.
 // TODO: u10 somewhat arbitrary, max stack length is 1024 and 2^10 = 1024. Is being this specific on parameter value here fine?
-fn stackOffTop(self: *EVM, index: u10) types.Word {
-    // TODO: Do we need assert here, double check if Zig gives us bounds checking for free on _runtime_ slice values (BoundedArray.get accesses the backing slice by index). I don't think we do, only for comptime known.
-    return self.stack.get(self.stack.len - index - 1);
-}
+// fn stackOffTop(self: *EVM, index: u10) types.Word {
+//     // TODO: Do we need assert here, double check if Zig gives us bounds checking for free on _runtime_ slice values (BoundedArray.get accesses the backing slice by index). I don't think we do, only for comptime known.
+//     return self.stack.get(self.stack.len - index - 1);
+// }
 
 fn gasEXP(self: *EVM, u_i__expanded: u64) Exception!u64 {
     _ = u_i__expanded;
@@ -533,7 +536,9 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{.GAS}, .{ .{}, .{"gas"} } },
     .{ .{.PUSH0}, .{ .{}, .{"constant"} } },
     .{ .{ 32, .PUSH }, .{ .{}, .{"bytes"} } },
-    .{ .{ 16, .DUP }, .{ .{.{ incrFrom(1), .DUP1, "duped" }}, .{"to"} } },
+    .{ .{ 16, .DUP }, .{ .{.{ incrFrom(1), .DUP1, "to_copy" }}, .{"copied"} } },
+    // TODO 2025/11/27: Need to redo how annotations are rendered and constructed. The actual printing to console is in EVM.nextOp but that of course depends on how they are defined. Essentially, the 0 <<-- and 0 -->> stuff works for almost all cases but we want to separately also be able to specify the index of the arguments to the opcode being called, not just the index they are affecting (as is the case now). This gets fucky with SWAP specifically.
+    .{ .{ 16, .SWAP }, .{ .{}, .{ "summoned", .{ incrFrom(2), .SWAP1, "banished" } } } },
 });
 
 const StackAnnotation = struct {

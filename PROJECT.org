@@ -20,6 +20,12 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-11-27 Thu 18:38]--[2025-11-27 Thu 20:38] =>  2:00
+- SWAP1...SWAP16 implementation; move stackOffTop; script to generate test; overthinking
+CLOCK: [2025-11-20 Thu 16:47]--[2025-11-20 Thu 17:03] =>  0:16
+- SWAP1...SWAP16 stub
+CLOCK: [2025-11-20 Thu 16:41]--[2025-11-20 Thu 16:46] =>  0:05
+- Add checklist of remaining opcodes to do
 CLOCK: [2025-11-13 Thu 21:32]--[2025-11-13 Thu 21:52] =>  0:20
 - ORIGIN with basic tests
 CLOCK: [2025-11-13 Thu 02:01]--[2025-11-13 Thu 02:07] =>  0:06
@@ -41,6 +47,43 @@ CLOCK: [2025-10-21 Tue 20:25]--[2025-10-21 Tue 20:50] =>  0:25
 CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
 - Add annotations for recently implemented JUMP, JUMPI, and PC.
 :END:
+
+**** Remaining [0/6]
+
+- [ ] ADDRESS
+- [ ] CALLER
+- [ ] CALLVALUE
+- [ ] CALLDATALOAD
+- [ ] CALLDATASIZE
+- [ ] CALLDATACOPY
+- [ ] CODESIZE
+- [ ] CODECOPY
+- [ ] GASPRICE
+- [ ] EXTCODESIZE
+- [ ] EXTCODECOPY
+- [ ] RETURNDATASIZE
+- [ ] RETURNDATACOPY
+- [ ] EXTCODEHASH
+- [ ] BLOCKHASH
+- [ ] CHAINID
+- [ ] SELFBALANCE
+- [ ] BLOBHASH
+- [ ] BLOBBASEFEE
+- [ ] SLOAD
+- [ ] SSTORE
+- [ ] TLOAD
+- [ ] TSTORE
+- [ ] MCOPY
+- [ ] SWAP1...SWAP16
+- [ ] LOG0...LOG4
+- [ ] CREATE
+- [ ] CALL
+- [ ] CALLCODE
+- [ ] DELEGATECALL
+- [ ] CREATE2
+- [ ] STATICCALL
+- [ ] SELFDESTRUCT
+
 **** JUMP
 :LOGBOOK:
 CLOCK: [2025-10-21 Tue 17:18]--[2025-10-21 Tue 19:04] =>  1:46

@@ -951,7 +951,7 @@ pub fn New(comptime Environment: type) type {
                        .DUP9, .DUP10, .DUP11, .DUP12, .DUP13, .DUP14, .DUP15, .DUP16
                 // zig fmt: on
                 => |op| {
-                    // Offset vs DUP1 is index from top of stack + 1 to duplicate.
+                    // Offset vs DUP1 is index from top-of-stack +1 to duplicate.
                     const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.DUP1);
 
                     try self.stack.append(self.stack.get(self.stack.len - offset));
@@ -962,9 +962,26 @@ pub fn New(comptime Environment: type) type {
                 inline .SWAP1, .SWAP2,  .SWAP3,  .SWAP4,  .SWAP5,  .SWAP6,  .SWAP7,  .SWAP8,
                        .SWAP9, .SWAP10, .SWAP11, .SWAP12, .SWAP13, .SWAP14, .SWAP15, .SWAP16
                 // zig fmt: on
-                => {
-                    // TODO
-                    return error.NotImplemented;
+                => |op| {
+                    // Offset vs SWAP1 is index from top-of-stack +1 to swap.
+
+                    // TODO: Let compiler optimise or manually do XOR to swap? Benchmark later.
+                    const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.SWAP1);
+                    const prior_top_item = self.stack.get(self.stack.len - 1);
+
+                    // Put offset item at top-of-stack.
+                    self.stack.set(
+                        self.stack.len - 1,
+                        self.stack.get(self.stack.len - offset - 1),
+                    );
+
+                    // Put prior top-of-stack item at offset.
+                    self.stack.set(
+                        self.stack.len - offset - 1,
+                        prior_top_item,
+                    );
+
+                    continue :sw try self.nextOp(rom);
                 },
                 // zig fmt: off
                 inline .LOG0, .LOG1, .LOG2, .LOG3, .LOG4,
