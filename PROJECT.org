@@ -48,7 +48,7 @@ CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
 - Add annotations for recently implemented JUMP, JUMPI, and PC.
 :END:
 
-**** Remaining [0/6]
+**** Remaining [1/33]
 
 - [ ] ADDRESS
 - [ ] CALLER
@@ -74,7 +74,7 @@ CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
 - [ ] TLOAD
 - [ ] TSTORE
 - [ ] MCOPY
-- [ ] SWAP1...SWAP16
+- [X] SWAP1...SWAP16
 - [ ] LOG0...LOG4
 - [ ] CREATE
 - [ ] CALL
@@ -135,6 +135,14 @@ CLOCK: [2025-10-21 Tue 19:11]--[2025-10-21 Tue 19:27] =>  0:16
 - State "TODO"       from              [2025-10-21 Tue 19:11]
 :END:
 Yellow-paper says _prior_ but (small) experimentation suggests _current_? Going with current for now, need to check this later.
+
+**** TODO CALLDATASIZE
+:LOGBOOK:
+- State "TODO"       from              [2025-11-27 Thu 21:07] \\
+  CALLDATASIZE pushes I_d, currently using that (incorrectly). The opcode now exists in zevem but Transaction.zig needs to be adjusted
+CLOCK: [2025-11-27 Thu 20:46]--[2025-11-27 Thu 21:06] =>  0:20
+- CALLDATASIZE but Transaction needs to be adjusted
+:END:
 
 *** Gas
 Ref: [[#h:BF533F42-7A90-4686-8AF8-5443D197FE14][YP Gas]]

@@ -626,7 +626,70 @@ test "basic ORIGIN" {
     }
 }
 
-// .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH =>
+test "basic CALLER" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic CALLVALUE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic CALLDATALOAD" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic CALLDATASIZE" {
+    // TODO: Transaction.zig needs changing or how the EVM is called does, since this will return tx.data.len which I'm setting the rom from which isn't strictly correct...?
+
+    return error.SkipZigTest;
+}
+
+test "basic CALLDATACOPY" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic CODESIZE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic CODECOPY" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic GASPRICE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic EXTCODESIZE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic EXTCODECOPY" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic RETURNDATASIZE" {
+    // TODO
+    return error.SkipZigTest;
+}
+
+test "basic RETURNDATACOPY" {
+    // TODO
+    return error.SkipZigTest;
+}
+test "basic EXTCODEHASH" {
+    // TODO
+    return error.SkipZigTest;
+}
 
 test "basic BLOCKHASH" {
     // TODO

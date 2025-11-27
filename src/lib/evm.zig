@@ -738,8 +738,12 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .ADDRESS => {
+                    // Pushes I_a onto stack.
+
                     // TODO
                     return error.NotImplemented;
+
+                    // continue :sw try self.nextOp(rom);
                 },
                 .BALANCE => {
                     try self.stack.append(try self.env.getBalance());
@@ -751,7 +755,18 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw try self.nextOp(rom);
                 },
-                .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
+                .CALLER, .CALLVALUE, .CALLDATALOAD => {
+                    // TODO: Implement.
+                    return error.NotImplemented;
+                },
+                .CALLDATASIZE => {
+                    // Pushes I_d (or T_d) onto stack.
+
+                    try self.stack.append(tx.data.len); // TODO: Or, if tx.data can always be set to `rom` as we do in execute() then just `self.rom`.
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },

@@ -526,6 +526,7 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{.BYTE}, .{ .{ "msb_offset", "operand" }, .{"result"} } },
     .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
     .{ .{.KECCAK256}, .{ .{ "offset", "length" }, .{"digest"} } },
+    .{ .{.CALLDATASIZE}, .{ .{"size"}, .{} } },
     .{ .{.ORIGIN}, .{ .{}, .{"addr"} } },
     .{ .{.POP}, .{ .{"discard"}, .{} } },
     .{ .{.MLOAD}, .{ .{"offset"}, .{"bytes"} } },
