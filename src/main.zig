@@ -17,6 +17,6 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     var dummyEnv = zevem.DummyEnv{ .block = .default };
     var evm2 = try EVM.init(allocator, &dummyEnv);
-    try evm2.execute(.{ .gas = 100_000, .data = &.{ 0x5F, 0x60, 0x11, 0x61, 0x22, 0x33, 0x00 } });
+    try evm2.execute(.{ .sender = 0, .gas = 100_000, .code = &.{ 0x5F, 0x60, 0x11, 0x61, 0x22, 0x33, 0x00 }, .data = "" });
     print("Done!", .{});
 }
