@@ -34,7 +34,8 @@ test "basic OutOfGas" {
     const res = sut.evm.execute(tx(.{
         .sender = 0,
         .gas = 123,
-        .data = "0100",
+        .code = "0100",
+        .data = "",
     }));
 
     try expectError(Exception.OutOfGas, res);
@@ -50,7 +51,8 @@ test "basic consumption" {
     const res = sut.evm.execute(tx(.{
         .sender = 0,
         .gas = 21_000,
-        .data = "00",
+        .code = "00",
+        .data = "",
     }));
 
     try expectEqual(0, sut.evm.gas); // All gas consumed until zero (which is NOT an error).

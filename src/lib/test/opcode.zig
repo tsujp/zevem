@@ -619,7 +619,8 @@ test "basic ORIGIN" {
         _ = try sut.evm.execute(tx(.{
             .sender = 0x1234,
             .gas = 100_000,
-            .data = "3200",
+            .code = "3200",
+            .data = "",
         }));
 
         try expectEqual(0x1234, sut.evm.stack.pop());
@@ -877,7 +878,8 @@ test "basic MSTORE" {
         const res = sut.evm.execute(tx(.{
             .sender = 0,
             .gas = 18446744073709551615,
-            .data = "60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200",
+            .code = "60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200",
+            .data = "",
         }));
 
         // try expectError(Exception.OutOfMemory, res); // TODO
@@ -1009,7 +1011,8 @@ test "basic GAS" {
         _ = try sut.evm.execute(tx(.{
             .sender = 0,
             .gas = 100_000,
-            .data = "5a00",
+            .code = "5a00",
+            .data = "",
         }));
 
         try expectEqual(sut.evm.gas, sut.evm.stack.pop());
@@ -1024,7 +1027,8 @@ test "basic GAS" {
         _ = try sut.evm.execute(tx(.{
             .sender = 0,
             .gas = 100_000,
-            .data = "60026004015a600860160150",
+            .code = "60026004015a600860160150",
+            .data = "",
         }));
 
         // TODO: Use the enum for the pricing i.e. verylow, low etc.

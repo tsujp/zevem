@@ -332,8 +332,8 @@ pub fn New(comptime Environment: type) type {
             const g_0 = try getAllCosts(self, .{ .constant = .transaction, .dynamic = null }, 0); // g_0 deduction (TODO: The rest per figure 64).
             self.gas -= (g_0[0] + g_0[1]);
 
-            // TODO: Hack for now, I imagine 'Transaction' type will change soon.
-            const rom = tx.data;
+            // Bytecode to execute always comes from I_b 'code', I_d 'data' is input to a contract.
+            const rom = tx.code;
 
             // FIXME: For now fine but see Implementation>Opcodes>JUMP (YP: 9.4.3) we will scan
             //        all of the rom ahead of time and construct a bitmask of valid JUMPDEST
@@ -760,13 +760,22 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .CALLDATASIZE => {
-                    // Pushes I_d (or T_d) onto stack.
+                    // Pushes I_d onto stack.
 
-                    try self.stack.append(tx.data.len); // TODO: Or, if tx.data can always be set to `rom` as we do in execute() then just `self.rom`.
+                    try self.stack.append(tx.data.len);
+                    // try self.stack.append(if (tx.data) |tdata| tdata.len else 0);
 
                     continue :sw try self.nextOp(rom);
                 },
-                .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
+                .CALLDATACOPY => {},
+                .CODESIZE => {
+                    // Pushes I_b onto stack.
+
+                    try self.stack.append(rom.len);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },
@@ -979,6 +988,8 @@ pub fn New(comptime Environment: type) type {
                 // zig fmt: on
                 => |op| {
                     // Offset vs SWAP1 is index from top-of-stack +1 to swap.
+
+                    // TODO 2025/11/28: Zig 0.14.1 compiler bug (segfault 11) if this code is present and built in ReleaseSafe (even if this code is not used).
 
                     // TODO: Let compiler optimise or manually do XOR to swap? Benchmark later.
                     const offset = 1 + @intFromEnum(op) - @intFromEnum(OpCode.SWAP1);

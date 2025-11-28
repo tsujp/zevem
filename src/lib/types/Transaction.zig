@@ -2,6 +2,7 @@
 
 // TODO: Rename this? At current progress (2025/08/12) meant to encompass a transaction beit
 //       message call or contract creation.
+// TODO 2025/11/28 union of struct types for various transactions? How we want the library API to look will decide this I think. For now not doing so (it _appears_ like there's no need to yet).
 
 const types = @import("../types.zig");
 
@@ -18,9 +19,13 @@ sender: types.Address,
 /// Transaction's gas limit: T_g
 gas: u64,
 
-// If a transaction message call it's T_d, otherwise I_d which is part of the EVM's execution
-//   environment.
-/// Arbitrary sized byte array of input data to transaction: T_d OR I_d
+// For CONTRACT CREATION T_i supplies this field.
+// For MESSAGE CALL the code stored at the address of the contract supplies this field.
+/// Arbitrary sized byte array of EVM bytecode to execute: I_b
+code: []const u8,
+
+// Only supply-able for MESSAGE CALL as additional input data for contract.
+/// Arbitrary sized byte array of input data to transaction: I_d
 data: []const u8,
 
 // pub const default: Transaction = .{

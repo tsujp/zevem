@@ -183,6 +183,8 @@ CLOCK: [2025-09-09 Tue 14:37]--[2025-09-09 Tue 17:01] =>  2:24
 
 *** Misc
 :LOGBOOK:
+CLOCK: [2025-11-28 Fri 16:28]--[2025-11-28 Fri 18:16] =>  1:48
+- Re-reviewing transaction structure (YP, other notes), also found a Zig compiler bug with SWAP only in ReleaseSafe which I need to ignore for now
 CLOCK: [2025-11-13 Thu 19:30]--[2025-11-13 Thu 21:16] =>  1:46
 - Horrible time double checking I_o for 0x32 ORIGIN and the fact that it's just T_s
 CLOCK: [2025-11-13 Thu 17:51]--[2025-11-13 Thu 19:21] =>  1:30

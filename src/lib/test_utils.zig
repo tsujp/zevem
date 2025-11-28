@@ -44,15 +44,17 @@ pub const Sut = struct {
         std.testing.allocator.destroy(self.env);
     }
 
+    // Simulates executing arbitrary free-floating bytecode.
     // Caller can provide bytecode as string, and can avoid use of `try` and still get the
     //   execution result or the expected error.
-    pub fn executeBasic(self: *Self, comptime bytes: []const u8) !void {
+    pub fn executeBasic(self: *Self, comptime code: []const u8) !void {
         if (!builtin.is_test) @compileError("this function is for use in tests only");
 
         const txx = Transaction{
             .sender = 0,
             .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
-            .data = &htb(bytes),
+            .code = &htb(code),
+            .data = &[_]u8{},
         };
 
         try self.evm.execute(txx);
@@ -60,7 +62,7 @@ pub const Sut = struct {
 };
 
 // TODO: Probably also want some re-usable one to avoid re-allocating every single time in these unit tests? But fresh context is important, but also testing properly is important.
-pub fn evmBasicBytecode(comptime bytes: []const u8) !EVM {
+pub fn evmBasicBytecode(comptime code: []const u8) !EVM {
     if (!builtin.is_test) @compileError("this function is for use in tests only");
 
     var dummyEnv: DummyEnv = .default;
@@ -72,7 +74,8 @@ pub fn evmBasicBytecode(comptime bytes: []const u8) !EVM {
     try evm_dummy.execute(.{
         .sender = 0,
         .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
-        .data = &htb(bytes),
+        .code = &htb(code),
+        .data = &[_]u8{},
     });
 
     return evm_dummy;
@@ -85,6 +88,7 @@ pub fn tx(comptime base_tx: Transaction) Transaction {
     var new_tx = base_tx;
 
     // Force inline copy at compile-time.
+    new_tx.code = comptime &htb(base_tx.code);
     new_tx.data = comptime &htb(base_tx.data);
 
     return new_tx;
