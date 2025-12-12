@@ -6,11 +6,12 @@ const print = std.debug.print;
 const zevem = @import("zevem");
 const EVM = zevem.EVM;
 
-const tracy = @import("tracy");
+const config = zevem.config;
+const tracy = if (config.use_tracy) @import("tracy") else struct {};
 
 pub fn main() !void {
-    const zone = tracy.initZone(@src(), .{ .name = "cli main" });
-    defer zone.deinit();
+    const zone = if (config.use_tracy) tracy.initZone(@src(), .{ .name = "cli main" });
+    defer if (config.use_tracy) zone.deinit();
     print("Hello, command-line world!\n", .{});
 
     var gpa: std.heap.DebugAllocator(.{}) = .init;

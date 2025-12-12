@@ -53,20 +53,21 @@ pub fn build(b: *std.Build) !void {
     const run_test_cmd = b.addRunArtifact(lib_test);
     test_step.dependOn(&run_test_cmd.step);
 
-    const tracy = b.dependency("tracy", .{
-        .target = target,
-        .optimize = optimize,
-        .tracy_enable = want_tracy,
-        .tracy_callstack = 10,
-        .tracy_no_exit = false,
-    });
-
-    lib_mod.addImport("tracy", tracy.module("tracy"));
-
+    var tracy: *std.Build.Dependency = undefined;
     if (want_tracy) {
-        // lib_mod.addImport("tracy", tracy.module("tracy"));
+        tracy = b.dependency("tracy", .{
+            .target = target,
+            .optimize = optimize,
+            .tracy_enable = want_tracy,
+            .tracy_callstack = 10,
+            .tracy_no_exit = false,
+        });
+        lib_mod.addImport("tracy", tracy.module("tracy"));
         lib_mod.linkLibrary(tracy.artifact("tracy"));
     }
+    const options = b.addOptions();
+    options.addOption(bool, "use_tracy", want_tracy);
+    lib_mod.addOptions("config", options);
 
     if (want_binary) {
         const exe_mod = b.createModule(.{
@@ -82,15 +83,15 @@ pub fn build(b: *std.Build) !void {
             .root_module = exe_mod,
         });
 
-        exe_mod.addImport("tracy", tracy.module("tracy"));
+        if (want_tracy) {
+            exe_mod.addImport("tracy", tracy.module("tracy"));
+        }
         const run_interpreter = b.addRunArtifact(exe);
         const run_step = b.step("run", "Run the interpreter");
         run_step.dependOn(&run_interpreter.step);
 
         if (want_tracy) {
-            // exe_mod.addImport("tracy", tracy.module("tracy"));
             exe_mod.linkLibrary(tracy.artifact("tracy"));
-            // exe.linkLibCpp();
         }
 
         b.installArtifact(exe);
