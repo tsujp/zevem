@@ -5,8 +5,9 @@ const native_endian = builtin.cpu.arch.endian();
 
 const DynamicBitSetUnmanaged = std.bit_set.DynamicBitSetUnmanaged;
 
+const config = @import("config");
 // TODO: FalsePattern's zig-tracy no-ops its functions if we don't enable it, but also check our own usage is no-op'd when not in-use.
-const tracy = @import("tracy");
+const tracy = if (config.use_tracy) @import("tracy") else struct {};
 
 pub const types = @import("types.zig");
 const Transaction = types.Transaction;
@@ -312,8 +313,8 @@ pub fn New(comptime Environment: type) type {
         pub fn execute(self: *Self, tx: Transaction) Exception!void {
             // TODO (2025/11/13): Likely have to put `tx` onto struct, since when we get into nested execution contexts we still need to report the correct origin (tx.sender).
 
-            const zone = tracy.initZone(@src(), .{ .name = "EVM execute" });
-            defer zone.deinit();
+            const zone = if (config.use_tracy) tracy.initZone(@src(), .{ .name = "EVM execute" });
+            defer if (config.use_tracy) zone.deinit();
 
             // Print execution information at terminal halting state.
             defer {
@@ -939,9 +940,12 @@ pub fn New(comptime Environment: type) type {
                        .PUSH25, .PUSH26, .PUSH27, .PUSH28, .PUSH29, .PUSH30, .PUSH31, .PUSH32
                 // zig fmt: on
                 => |op| {
-                    const zt = traceZone(@src(), "PUSH");
-                    zt.text(@tagName(op));
-                    defer zt.deinit();
+                    const zt = if (config.use_tracy) blk: {
+                        const zt = traceZone(@src(), "PUSH");
+                        zt.text(@tagName(op));
+                        break :blk zt;
+                    };
+                    defer if (config.use_tracy) zt.deinit();
 
                     // TODO: YP for PUSH1 to PUSH32 defines function c:
                     // "The function c ensures the bytes default to zero if they extend past the limits"

@@ -7,6 +7,7 @@ pub const evm = @import("lib/evm.zig");
 pub const DummyEnv = @import("lib/DummyEnv.zig");
 
 pub const EVM = evm.New(DummyEnv);
+pub const config = @import("config");
 
 // TODO: Since moving stackOffTop into utils the imports (like this one) feel a bit messy? Clean up later?
 const types = @import("lib/types.zig");
