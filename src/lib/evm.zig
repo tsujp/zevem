@@ -844,8 +844,11 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .CHAINID => {
-                    // TODO: Implement.
-                    return error.NotImplemented;
+                    // Push β onto stack.
+
+                    try self.stack.append(self.env.chain_id);
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .SELFBALANCE => {
                     // TODO: Implement.

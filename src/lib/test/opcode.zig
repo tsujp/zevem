@@ -730,7 +730,7 @@ test "basic GASLIMIT" {
 }
 
 test "basic CHAINID" {
-    // TODO
+    // TODO: Simpler test like with the basic block headers.
     return error.SkipZigTest;
 }
 

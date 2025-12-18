@@ -7,8 +7,14 @@ const DummyEnv = @This();
 /// Block header information the EVM requires.
 block: types.BlockHeader,
 
+/// ChainID: β
+chain_id: u64, // TODO: Does it really need to be u256?
+
 // Decl literals for easier initialisation.
-pub const default: DummyEnv = .{ .block = .default };
+pub const default: DummyEnv = .{
+    .block = .default,
+    .chain_id = 0,
+};
 // pub fn init(block: types.BlockHeader) DummyEnv {
 //     return .{ .block = block };
 // }
