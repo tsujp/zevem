@@ -52,6 +52,7 @@ pub const Sut = struct {
 
         const txx = Transaction{
             .sender = 0,
+            .target = 0,
             .value = 0,
             .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
             .gas_price = 0,
@@ -75,6 +76,7 @@ pub fn evmBasicBytecode(comptime code: []const u8) !EVM {
     var evm_dummy = try EVM.init(allocator, &dummyEnv);
     try evm_dummy.execute(.{
         .sender = 0,
+        .target = 0,
         .value = 0,
         .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
         .gas_price = 0,

@@ -20,6 +20,8 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-12-18 Thu 22:20]--[2025-12-18 Thu 22:32] =>  0:12
+- Add ADDRESS without tests
 CLOCK: [2025-12-18 Thu 21:58]--[2025-12-18 Thu 22:19] =>  0:21
 - Add GASPRICE without tests
 CLOCK: [2025-12-18 Thu 21:55]--[2025-12-18 Thu 21:56] =>  0:01
@@ -58,9 +60,9 @@ CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
 - Add annotations for recently implemented JUMP, JUMPI, and PC.
 :END:
 
-**** Remaining [6/33]
+**** Remaining [7/33]
 
-- [ ] ADDRESS
+- [X] ADDRESS
 - [X] CALLER
 - [X] CALLVALUE
 - [ ] CALLDATALOAD

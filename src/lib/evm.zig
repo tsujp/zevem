@@ -741,12 +741,12 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .ADDRESS => {
-                    // Pushes I_a onto stack.
+                    // Push I_a onto stack.
 
-                    // TODO
-                    return error.NotImplemented;
+                    // XXX: See Transaction.target TODO for context.
+                    try self.stack.append(tx.target);
 
-                    // continue :sw try self.nextOp(rom);
+                    continue :sw try self.nextOp(rom);
                 },
                 .BALANCE => {
                     try self.stack.append(try self.env.getBalance());

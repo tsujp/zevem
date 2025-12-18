@@ -585,6 +585,11 @@ test "basic KECCAK256" {
     );
 }
 
+test "basic ADDRESS" {
+    // TODO: Test scenario, nested contexts.
+    return error.SkipZigTest;
+}
+
 test "basic BALANCE" {
     // TODO
     return error.SkipZigTest;
@@ -618,6 +623,7 @@ test "basic ORIGIN" {
 
         _ = try sut.evm.execute(tx(.{
             .sender = 0x1234,
+            .target = 0,
             .value = 0,
             .gas = 100_000,
             .gas_price = 0,
@@ -665,7 +671,7 @@ test "basic CODECOPY" {
 }
 
 test "basic GASPRICE" {
-    // TODO
+    // TODO: Need a test scenario, including nested context.
     return error.SkipZigTest;
 }
 
@@ -878,6 +884,7 @@ test "basic MSTORE" {
 
         const res = sut.evm.execute(tx(.{
             .sender = 0,
+            .target = 0,
             .value = 0,
             .gas = 18446744073709551615,
             .gas_price = 0,
@@ -1013,6 +1020,7 @@ test "basic GAS" {
 
         _ = try sut.evm.execute(tx(.{
             .sender = 0,
+            .target = 0,
             .value = 0,
             .gas = 100_000,
             .gas_price = 0,
@@ -1031,6 +1039,7 @@ test "basic GAS" {
 
         _ = try sut.evm.execute(tx(.{
             .sender = 0,
+            .target = 0,
             .value = 0,
             .gas = 100_000,
             .gas_price = 0,

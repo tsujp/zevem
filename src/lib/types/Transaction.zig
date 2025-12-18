@@ -10,12 +10,18 @@ const Transaction = @This();
 
 // Common fields
 
-// TODO: Nonce, r, , etc.
+// TODO: Nonce, r, etc.
 
 // TODO: Need to put some clarity here on T_s and I_s interaction, for now this is fine. User must supply this even for nested calls so we can "stupidly" just treat this as I_s. Clarity once library actually used.
 // T_s is a 160-bit address.
 /// Transaction's sender: T_s
 sender: types.Address,
+
+// TODO: Better name? Explicitly set by user, nested contexts and so forth as CREATE/CREATE2/DELEGATECALL and friends all end up setting what becomes I_a differently.
+// For CONTRACT CREATION this is pre-computed and supplied by user (TODO: Double check is that for ALL cases [CREATE])
+// For MESSAGE CALL T_t supplies.
+/// Transaction's target: T_t, eventual I_a
+target: types.Address,
 
 // TODO: Until library abstraction boundry clearer just assuming T_v is always I_v, user must construct nested calls (setting new appropriate I_v) themselves.
 // TODO: `Word` type fine? Just using it for now for simplicity. Probably can be the same as the gas ceiling since ETH supply is nowhere near what a u256 can fit.
