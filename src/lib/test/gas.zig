@@ -35,6 +35,7 @@ test "basic OutOfGas" {
         .sender = 0,
         .value = 0,
         .gas = 123,
+        .gas_price = 0,
         .code = "0100",
         .data = "",
     }));
@@ -53,6 +54,7 @@ test "basic consumption" {
         .sender = 0,
         .value = 0,
         .gas = 21_000,
+        .gas_price = 0,
         .code = "00",
         .data = "",
     }));

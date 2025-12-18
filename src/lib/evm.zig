@@ -327,7 +327,9 @@ pub fn New(comptime Environment: type) type {
 
             self.gas = tx.gas;
 
-            // TODO: The rest of the upfront gas cost per figure 64 of YP.
+            // TODO: The rest of the upfront gas cost per figure 64, 66, 67, 68 of YP.
+            // TODO 2025/12/18: User probably just supplies single gasPrice instead of us calculating based on transaction type? We're just the library and probably drawing a boundry line there?
+            // TODO 2025/12/18: actually use tx.gas_price ??????????
             if (tx.gas < getConstantCost(.transaction)) return Exception.OutOfGas;
 
             const g_0 = try getAllCosts(self, .{ .constant = .transaction, .dynamic = null }, 0); // g_0 deduction (TODO: The rest per figure 64).
@@ -794,7 +796,19 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw try self.nextOp(rom);
                 },
-                .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
+                .CODECOPY => {
+                    // TODO: Implement.
+                    return error.NotImplemented;
+                },
+                .GASPRICE => {
+                    // Push I_p onto stack.
+
+                    // XXX: See Transaction.gas_price TODO for context.
+                    try self.stack.append(tx.gas_price);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH => {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },

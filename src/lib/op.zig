@@ -539,7 +539,7 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{ 32, .PUSH }, .{ .{}, .{"bytes"} } },
     .{ .{ 16, .DUP }, .{ .{.{ incrFrom(1), .DUP1, "to_copy" }}, .{"copied"} } },
 
-    // TODO: CALLER, CODESIZE, CALLVALUE.
+    // TODO: CALLER, CODESIZE, CALLVALUE, GASPRICE.
 
     // TODO 2025/11/27: Need to redo how annotations are rendered and constructed. The actual printing to console is in EVM.nextOp but that of course depends on how they are defined. Essentially, the 0 <<-- and 0 -->> stuff works for almost all cases but we want to separately also be able to specify the index of the arguments to the opcode being called, not just the index they are affecting (as is the case now). This gets fucky with SWAP specifically.
     .{ .{ 16, .SWAP }, .{ .{}, .{ "summoned", .{ incrFrom(2), .SWAP1, "banished" } } } },

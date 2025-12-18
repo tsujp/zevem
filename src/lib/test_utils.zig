@@ -54,6 +54,7 @@ pub const Sut = struct {
             .sender = 0,
             .value = 0,
             .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
+            .gas_price = 0,
             .code = &htb(code),
             .data = &[_]u8{},
         };
@@ -76,6 +77,7 @@ pub fn evmBasicBytecode(comptime code: []const u8) !EVM {
         .sender = 0,
         .value = 0,
         .gas = 100_000, // Arbitrary, should be enough to cover all _basic_ test cases.
+        .gas_price = 0,
         .code = &htb(code),
         .data = &[_]u8{},
     });

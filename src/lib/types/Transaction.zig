@@ -25,6 +25,11 @@ value: types.Word,
 /// Transaction's gas limit: T_g
 gas: u64,
 
+// TODO: Better docs on this maybe, but importantly user sets this field by doing 64, 66, 67, 68 of the YP (probably), we don't do that so this is the pre-calculated value that becomes the EVM's I_p.
+// TODO: Actually use this field (currently just exists and not being used at all).
+/// Transaction's condensed gas price: T_p, T_m, T_f
+gas_price: u64,
+
 // For CONTRACT CREATION T_i supplies this field.
 // For MESSAGE CALL the code stored at the address of the contract supplies this field.
 /// Arbitrary sized byte array of EVM bytecode to execute: I_b

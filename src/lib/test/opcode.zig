@@ -620,6 +620,7 @@ test "basic ORIGIN" {
             .sender = 0x1234,
             .value = 0,
             .gas = 100_000,
+            .gas_price = 0,
             .code = "3200",
             .data = "",
         }));
@@ -879,6 +880,7 @@ test "basic MSTORE" {
             .sender = 0,
             .value = 0,
             .gas = 18446744073709551615,
+            .gas_price = 0,
             .code = "60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200",
             .data = "",
         }));
@@ -1013,6 +1015,7 @@ test "basic GAS" {
             .sender = 0,
             .value = 0,
             .gas = 100_000,
+            .gas_price = 0,
             .code = "5a00",
             .data = "",
         }));
@@ -1030,6 +1033,7 @@ test "basic GAS" {
             .sender = 0,
             .value = 0,
             .gas = 100_000,
+            .gas_price = 0,
             .code = "60026004015a600860160150",
             .data = "",
         }));
