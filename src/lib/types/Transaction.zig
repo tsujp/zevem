@@ -10,12 +10,17 @@ const Transaction = @This();
 
 // Common fields
 
-// TODO: Nonce, value, r, s, etc.
+// TODO: Nonce, r, , etc.
 
 // TODO: Need to put some clarity here on T_s and I_s interaction, for now this is fine. User must supply this even for nested calls so we can "stupidly" just treat this as I_s. Clarity once library actually used.
 // T_s is a 160-bit address.
 /// Transaction's sender: T_s
 sender: types.Address,
+
+// TODO: Until library abstraction boundry clearer just assuming T_v is always I_v, user must construct nested calls (setting new appropriate I_v) themselves.
+// TODO: `Word` type fine? Just using it for now for simplicity. Probably can be the same as the gas ceiling since ETH supply is nowhere near what a u256 can fit.
+/// Transaction's value in wei: T_v
+value: types.Word,
 
 /// Transaction's gas limit: T_g
 gas: u64,

@@ -759,12 +759,20 @@ pub fn New(comptime Environment: type) type {
                 .CALLER => {
                     // Push I_s onto stack.
 
-                    // XXX: See Transaction.sender TODO for context on this.
+                    // XXX: See Transaction.sender TODO for context.
                     try self.stack.append(tx.sender);
 
                     continue :sw try self.nextOp(rom);
                 },
-                .CALLVALUE, .CALLDATALOAD => {
+                .CALLVALUE => {
+                    // Push I_v onto stack.
+
+                    // XXX: See Transaction.value TODO for context.
+                    try self.stack.append(tx.value);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .CALLDATALOAD => {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },

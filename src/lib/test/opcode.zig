@@ -618,6 +618,7 @@ test "basic ORIGIN" {
 
         _ = try sut.evm.execute(tx(.{
             .sender = 0x1234,
+            .value = 0,
             .gas = 100_000,
             .code = "3200",
             .data = "",
@@ -633,7 +634,7 @@ test "basic CALLER" {
 }
 
 test "basic CALLVALUE" {
-    // TODO
+    // TODO: Need a test scenario, including nested calls e.g. CALL/CREATE.
     return error.SkipZigTest;
 }
 
@@ -877,6 +878,7 @@ test "basic MSTORE" {
 
         const res = sut.evm.execute(tx(.{
             .sender = 0,
+            .value = 0,
             .gas = 18446744073709551615,
             .code = "60ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0005200",
             .data = "",
@@ -1010,6 +1012,7 @@ test "basic GAS" {
 
         _ = try sut.evm.execute(tx(.{
             .sender = 0,
+            .value = 0,
             .gas = 100_000,
             .code = "5a00",
             .data = "",
@@ -1026,6 +1029,7 @@ test "basic GAS" {
 
         _ = try sut.evm.execute(tx(.{
             .sender = 0,
+            .value = 0,
             .gas = 100_000,
             .code = "60026004015a600860160150",
             .data = "",
