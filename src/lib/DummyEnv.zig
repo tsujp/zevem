@@ -10,10 +10,15 @@ block: types.BlockHeader,
 /// ChainID: β
 chain_id: u64, // TODO: Does it really need to be u256?
 
+// TODO: API design here, is this fine? What about as execution progresses?
+/// Balance of current EVM target I_a: σ[I_a]_b
+target_balance: u256,
+
 // Decl literals for easier initialisation.
 pub const default: DummyEnv = .{
     .block = .default,
     .chain_id = 0,
+    .target_balance = 0,
 };
 // pub fn init(block: types.BlockHeader) DummyEnv {
 //     return .{ .block = block };

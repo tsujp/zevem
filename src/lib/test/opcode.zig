@@ -735,7 +735,7 @@ test "basic CHAINID" {
 }
 
 test "basic SELFBALANCE" {
-    // TODO
+    // TODO: Test scenario, including nested contexts.
     return error.SkipZigTest;
 }
 

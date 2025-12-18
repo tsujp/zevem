@@ -749,10 +749,12 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .BALANCE => {
+                    // TODO: Needs to supply argument to getBalance no?
+
                     try self.stack.append(try self.env.getBalance());
-                    // TODO: Next op?
+
+                    continue :sw try self.nextOp(rom);
                 },
-                // TODO: Spit as appropriate when implementing.
                 .ORIGIN => {
                     // Push I_o onto stack.
 
@@ -851,8 +853,11 @@ pub fn New(comptime Environment: type) type {
                     continue :sw try self.nextOp(rom);
                 },
                 .SELFBALANCE => {
-                    // TODO: Implement.
-                    return error.NotImplemented;
+                    // Push balance of I_a onto stack.
+
+                    try self.stack.append(self.env.target_balance);
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .BASEFEE => {
                     try self.stack.append(self.env.block.base_fee);
