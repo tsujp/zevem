@@ -12,6 +12,7 @@ const Transaction = @This();
 
 // TODO: Nonce, value, r, s, etc.
 
+// TODO: Need to put some clarity here on T_s and I_s interaction, for now this is fine. User must supply this even for nested calls so we can "stupidly" just treat this as I_s. Clarity once library actually used.
 // T_s is a 160-bit address.
 /// Transaction's sender: T_s
 sender: types.Address,

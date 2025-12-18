@@ -20,6 +20,10 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2025-12-18 Thu 21:33]--[2025-12-18 Thu 21:41] =>  0:08
+- Add CALLER without tests
+CLOCK: [2025-12-18 Thu 21:20]--[2025-12-18 Thu 21:29] =>  0:09
+- Figure out where I was (somewhat) last. CODESIZE needs a test scenario but looks good for now.
 CLOCK: [2025-11-27 Thu 18:38]--[2025-11-27 Thu 20:38] =>  2:00
 - SWAP1...SWAP16 implementation; move stackOffTop; script to generate test; overthinking
 CLOCK: [2025-11-20 Thu 16:47]--[2025-11-20 Thu 17:03] =>  0:16
@@ -48,15 +52,15 @@ CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
 - Add annotations for recently implemented JUMP, JUMPI, and PC.
 :END:
 
-**** Remaining [1/33]
+**** Remaining [3/33]
 
 - [ ] ADDRESS
-- [ ] CALLER
+- [X] CALLER
 - [ ] CALLVALUE
 - [ ] CALLDATALOAD
 - [ ] CALLDATASIZE
 - [ ] CALLDATACOPY
-- [ ] CODESIZE
+- [X] CODESIZE
 - [ ] CODECOPY
 - [ ] GASPRICE
 - [ ] EXTCODESIZE

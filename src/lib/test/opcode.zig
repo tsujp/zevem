@@ -628,7 +628,7 @@ test "basic ORIGIN" {
 }
 
 test "basic CALLER" {
-    // TODO
+    // TODO: Need a test scenario, including with nested context. Need to actually derive the caller address or do we expect the user to be that before.
     return error.SkipZigTest;
 }
 
@@ -654,7 +654,7 @@ test "basic CALLDATACOPY" {
 }
 
 test "basic CODESIZE" {
-    // TODO
+    // TODO: Need a test scenario, but as zevem stands it's the users job to set Transaction.code correctly.
     return error.SkipZigTest;
 }
 

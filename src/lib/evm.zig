@@ -756,7 +756,15 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw try self.nextOp(rom);
                 },
-                .CALLER, .CALLVALUE, .CALLDATALOAD => {
+                .CALLER => {
+                    // Push I_s onto stack.
+
+                    // XXX: See Transaction.sender TODO for context on this.
+                    try self.stack.append(tx.sender);
+
+                    continue :sw try self.nextOp(rom);
+                },
+                .CALLVALUE, .CALLDATALOAD => {
                     // TODO: Implement.
                     return error.NotImplemented;
                 },
@@ -770,7 +778,7 @@ pub fn New(comptime Environment: type) type {
                 },
                 .CALLDATACOPY => {},
                 .CODESIZE => {
-                    // Pushes I_b onto stack.
+                    // Push I_b onto stack.
 
                     try self.stack.append(rom.len);
 
