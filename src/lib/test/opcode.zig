@@ -644,8 +644,7 @@ test "basic CALLDATALOAD" {
 }
 
 test "basic CALLDATASIZE" {
-    // TODO: Transaction.zig needs changing or how the EVM is called does, since this will return tx.data.len which I'm setting the rom from which isn't strictly correct...?
-
+    // TODO: Need a test scenario, including nested context.
     return error.SkipZigTest;
 }
 

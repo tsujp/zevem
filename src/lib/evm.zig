@@ -752,6 +752,8 @@ pub fn New(comptime Environment: type) type {
                 },
                 // TODO: Spit as appropriate when implementing.
                 .ORIGIN => {
+                    // Push I_o onto stack.
+
                     try self.stack.append(tx.sender);
 
                     continue :sw try self.nextOp(rom);
@@ -777,7 +779,7 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 .CALLDATASIZE => {
-                    // Pushes I_d onto stack.
+                    // Push I_d onto stack.
 
                     try self.stack.append(tx.data.len);
                     // try self.stack.append(if (tx.data) |tdata| tdata.len else 0);
