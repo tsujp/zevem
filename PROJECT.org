@@ -20,6 +20,8 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2026-01-02 Fri 20:52]--[2026-01-02 Fri 22:59] =>  2:07
+- Lot's of YP reading and notes (I am very tired). Got a plan for CREATE/2 now, got Korean tests next week but have an actionable plan for 'pausing' execution so that the host orchestrates the nested call and resumes.
 CLOCK: [2025-12-18 Thu 22:43]--[2025-12-18 Thu 22:53] =>  0:10
 - Add SELFBALANCE without tests
 CLOCK: [2025-12-18 Thu 22:35]--[2025-12-18 Thu 22:42] =>  0:07
@@ -205,6 +207,8 @@ CLOCK: [2025-09-09 Tue 14:37]--[2025-09-09 Tue 17:01] =>  2:24
 
 *** Misc
 :LOGBOOK:
+CLOCK: [2026-01-02 Fri 20:25]--[2026-01-02 Fri 20:51] =>  0:26
+- Looking at JSON test fixtures to incorporate into Zevem; holding off for now since I think a few more opcodes can still take unit tests meaningfully.
 CLOCK: [2025-11-28 Fri 16:28]--[2025-11-28 Fri 18:16] =>  1:48
 - Re-reviewing transaction structure (YP, other notes), also found a Zig compiler bug with SWAP only in ReleaseSafe which I need to ignore for now
 CLOCK: [2025-11-13 Thu 19:30]--[2025-11-13 Thu 21:16] =>  1:46

@@ -62,6 +62,8 @@ fn traceOpPush(pc: usize, operand: Word) void {
 
 // TODO [2025/08/12]: I had something planned in the past with errors and them having some
 //   contextual values (e.g. associated data) but cannot remember right now.
+// TODO 2026/01/02: Restructure errors into an tagged union and error set, instead of JUST the current Exception error set.
+//                  need to put OrchestrateCreate2 and so forth into tagged union so we can pass back data.
 pub const Exception = error{
     StackUnderflow,
     StackOverflow,
@@ -69,6 +71,7 @@ pub const Exception = error{
     Revert,
     OutOfGas,
     InvalidJumpDestination,
+    OrchestrateCreate2, // REPLACE QUICKLY!
     // XXX: Following are just to shut Zig up for now.
     Overflow, // For: try self.stack.append(self.stack.pop().? +% self.stack.pop().?);
     NotImplemented,
@@ -1062,7 +1065,26 @@ pub fn New(comptime Environment: type) type {
                     return error.NotImplemented;
                 },
                 // TODO: These are only grouped while un-implemented, split into own prongs as required when implementing.
-                .CREATE, .CALL, .CALLCODE, .DELEGATECALL, .CREATE2, .STATICCALL => {
+                .CREATE, .CALL, .CALLCODE, .DELEGATECALL => {
+                    return error.NotImplemented;
+                },
+                .CREATE2 => {
+                    // s[0] = endowment (in wei) ; s[1] = memory offset start ; s[2] = size of memory to read ; s[3] = salt
+                    const endowment = self.stack.pop().?;
+                    const offset = self.stack.pop().?;
+                    const size = self.stack.pop().?;
+                    const salt = self.stack.pop().?;
+                    _ = endowment;
+                    _ = offset;
+                    _ = size;
+                    _ = salt;
+
+                    // TODO: Return enum with data, double check if we advance PC now or not, other required return data bits host needs for nested EVM execution. Host can then 'resume' this (parent) EVM by setting any environmental data as required, any changes to stack, gas available etc, and then calling execute() again.
+                    // TODO: execute() now probably needs a change since IIRC we do a lot of checks like jumpdests and gas etc there which don't need to be done on resumption so that needs to be separated out but for now can probably be wrapped in a (nasty) if block (something something premature optimisation).
+                    // TODO: Replace with tagged union so we can pass back data.
+                    return error.OrchestrateCreate2;
+                },
+                .STATICCALL => {
                     // TODO: Implement.
                     // TODO: Custom gas.
                     return error.NotImplemented;
