@@ -298,7 +298,8 @@ const OpCodes = MakeOpCodes(.{
     .{ .CALLCODE, .{}, .TODO_CUSTOM_FEE, null, 7, 1 }, // Message-call into account with alternative account's code.
     .{ .RETURN, .{}, .zero, null, 2, 0 }, // Halt, return output data.
     .{ .DELEGATECALL, .{}, .TODO_CUSTOM_FEE, null, 6, 1 }, //
-    .{ .CREATE2, .{}, .TODO_CUSTOM_FEE, null, 4, 1 }, // Create new account with given code at predictable address.
+    // TODO: Needs G_codedeposit, G_initcodeword, and it's own custom CREATE2 gas calculation per (326), like how KECCAK256 has it's own. Check G_codedeposit and G_initcodeword are part of that in 326 or if we need to do those separately.
+    .{ .CREATE2, .{}, .create, null, 4, 1, simpleMemorySize(.{1}, .{2}) }, // Create new account with given code at predictable address.
     // UNUSED: 0xF6 ... 0xF9
     .{ .STATICCALL, .{0xFA}, .TODO_CUSTOM_FEE, null, 6, 1 }, // Static message call into account.
     // UNUSED: 0xFB ... 0xFC

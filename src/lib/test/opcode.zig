@@ -1235,6 +1235,24 @@ test "basic SWAP" {
     try expectEqual(9, utils.stackOffTop(&s16_a, 16));
 }
 
+// TODO: LOG0, LOG1, LOG2, LOG3, LOG4
+// TODO: CREATE, CALL, CALLCODE, DELEGATECALL
+
+test "basic CREATE2" {
+    // Account with 0 endowment, no init-code, and salt of 0.
+    var sut: Sut = try .init(.{});
+    defer sut.deinit();
+
+    const res = sut.executeBasic("5f5f5f5ff5");
+    try expectError(Exception.Orchestrate, res);
+    // TODO: Assert type of Orchestrate is Orchestrate.CREATE2.
+
+    // CREATE2 tests and implementation is not done yet so mark this test as failing.
+    return error.SkipZigTest;
+}
+
+// TODO: STATICCALL
+
 test "basic RETURN" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then return.
     const vm = try basicBytecode("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60ff52602060fff300");

@@ -20,6 +20,8 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
+CLOCK: [2026-01-14 Wed 21:01]--[2026-01-14 Wed 21:50] =>  0:49
+- A bit of CREATE2 implementation and yak shaving on representation requirement for host to orchestrate. Will just have a field on EVM struct and go that route for now versus tagged error union return. Still need to do gas (326) for CREATE2 and then finish the test scenario for resumption.
 CLOCK: [2026-01-02 Fri 20:52]--[2026-01-02 Fri 22:59] =>  2:07
 - Lot's of YP reading and notes (I am very tired). Got a plan for CREATE/2 now, got Korean tests next week but have an actionable plan for 'pausing' execution so that the host orchestrates the nested call and resumes.
 CLOCK: [2025-12-18 Thu 22:43]--[2025-12-18 Thu 22:53] =>  0:10

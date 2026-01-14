@@ -71,12 +71,29 @@ pub const Exception = error{
     Revert,
     OutOfGas,
     InvalidJumpDestination,
-    OrchestrateCreate2, // REPLACE QUICKLY!
+    // OrchestrateCreate2, // REPLACE QUICKLY!
+    Orchestrate,
     // XXX: Following are just to shut Zig up for now.
     Overflow, // For: try self.stack.append(self.stack.pop().? +% self.stack.pop().?);
     NotImplemented,
     MemResizeUInt256Overflow,
     OutOfMemory, // For: try self.mem.resize(self.alloc, memsize_usize);
+    // StopREPLACEME, // XXX: Terrible hack just while working on tagged union returns for CREATE2 etc.
+    // ReturnRevertREPLACEME, // XXX: Terrible hack just while working on tagged union returns for CREATE2.
+};
+
+// TODO: Name and other bikeshedding shit, plus whether we want this API etc.
+pub const OrchestrateCreate2 = struct {
+    // TODO: Just provide back the slice itself or...?
+    endowment: u256,
+    offset: u256,
+    size: u256,
+    salt: u256,
+};
+
+// TODO: Name and other bikeshedding shit.
+pub const Orchestrate = union(enum) {
+    CREATE2: OrchestrateCreate2,
 };
 
 // TODO: Output test binary so I can run poop on that.
@@ -136,6 +153,8 @@ pub fn New(comptime Environment: type) type {
 
         return_data: []u8,
 
+        orchestrate: ?Orchestrate,
+
         // XXX: I don't like putting this here but it'll do _for now_. If this is never referenced
         //      like the other trace functions when in a debug build (TODO) will this be optimised
         //      out by the Zig compiler and thus reduce the size of this anonymous struct or will
@@ -155,6 +174,7 @@ pub fn New(comptime Environment: type) type {
                 .env = env,
                 .mem = .empty,
                 .return_data = &[0]u8{},
+                .orchestrate = null,
                 .prior_final = null,
             };
         }
@@ -1074,15 +1094,23 @@ pub fn New(comptime Environment: type) type {
                     const offset = self.stack.pop().?;
                     const size = self.stack.pop().?;
                     const salt = self.stack.pop().?;
-                    _ = endowment;
-                    _ = offset;
-                    _ = size;
-                    _ = salt;
+
+                    self.orchestrate = .{ .CREATE2 = .{
+                        .endowment = endowment,
+                        .offset = offset,
+                        .size = size,
+                        .salt = salt,
+                    } };
+
+                    // _ = endowment;
+                    // _ = offset;
+                    // _ = size;
+                    // _ = salt;
 
                     // TODO: Return enum with data, double check if we advance PC now or not, other required return data bits host needs for nested EVM execution. Host can then 'resume' this (parent) EVM by setting any environmental data as required, any changes to stack, gas available etc, and then calling execute() again.
                     // TODO: execute() now probably needs a change since IIRC we do a lot of checks like jumpdests and gas etc there which don't need to be done on resumption so that needs to be separated out but for now can probably be wrapped in a (nasty) if block (something something premature optimisation).
                     // TODO: Replace with tagged union so we can pass back data.
-                    return error.OrchestrateCreate2;
+                    return error.Orchestrate;
                 },
                 .STATICCALL => {
                     // TODO: Implement.
