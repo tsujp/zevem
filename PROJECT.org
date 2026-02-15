@@ -20,8 +20,6 @@ TODO: Finish refreshing myself on what I need to catch up on here.
 ** Implementation
 *** Opcodes
 :LOGBOOK:
-CLOCK: [2026-01-14 Wed 21:01]--[2026-01-14 Wed 21:50] =>  0:49
-- A bit of CREATE2 implementation and yak shaving on representation requirement for host to orchestrate. Will just have a field on EVM struct and go that route for now versus tagged error union return. Still need to do gas (326) for CREATE2 and then finish the test scenario for resumption.
 CLOCK: [2026-01-02 Fri 20:52]--[2026-01-02 Fri 22:59] =>  2:07
 - Lot's of YP reading and notes (I am very tired). Got a plan for CREATE/2 now, got Korean tests next week but have an actionable plan for 'pausing' execution so that the host orchestrates the nested call and resumes.
 CLOCK: [2025-12-18 Thu 22:43]--[2025-12-18 Thu 22:53] =>  0:10
@@ -169,6 +167,19 @@ CLOCK: [2025-11-27 Thu 20:46]--[2025-11-27 Thu 21:06] =>  0:20
 - State "TODO"       from              [2025-12-18 Thu 22:20] \\
   GASPRICE as it's been added (stubbed basically) is not really being used, tx.gas_price is ignored. Can probably clean up or optimise the gas situation a little? Clarity will come when library is used and API is more concrete.
 :END:
+
+**** TODO CREATE, CREATE2
+:LOGBOOK:
+CLOCK: [2026-02-15 Sun 18:37]--[2026-02-15 Sun 19:30] =>  0:53
+- CREATE2 union tag assert, add stubbed CREATE
+CLOCK: [2026-01-14 Wed 21:01]--[2026-01-14 Wed 21:50] =>  0:49
+- A bit of CREATE2 implementation and yak shaving on representation requirement for host to orchestrate. Will just have a field on EVM struct and go that route for now versus tagged error union return. Still need to do gas (326) for CREATE2 and then finish the test scenario for resumption.
+- State "TODO"       from              [2026-02-15 Sun 19:20] \\
+  Various things like exact gas costs (G_initcodeword), and their entries from H.1(326) are still to-do as well as tests asserting correct VM state afterwards. Left for now as I await project status and until the rest of the opcodes are generally done.
+:END:
+
+- [ ] H.1(326) behaviour
+- [ ] G fee schedule minutia (e.g. G_initcodeword)
 
 *** Gas
 Ref: [[#h:BF533F42-7A90-4686-8AF8-5443D197FE14][YP Gas]]

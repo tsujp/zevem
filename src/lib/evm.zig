@@ -91,8 +91,16 @@ pub const OrchestrateCreate2 = struct {
     salt: u256,
 };
 
+pub const OrchestrateCreate = struct {
+    endowment: u256,
+    offset: u256,
+    size: u256,
+};
+
 // TODO: Name and other bikeshedding shit.
+// TODO: Layout/ordering?
 pub const Orchestrate = union(enum) {
+    CREATE: OrchestrateCreate,
     CREATE2: OrchestrateCreate2,
 };
 
@@ -1084,8 +1092,22 @@ pub fn New(comptime Environment: type) type {
                     // TODO: Custom gas (do this one first I reckon, it's fairly simple).
                     return error.NotImplemented;
                 },
-                // TODO: These are only grouped while un-implemented, split into own prongs as required when implementing.
-                .CREATE, .CALL, .CALLCODE, .DELEGATECALL => {
+                .CREATE => {
+                    // s[0] = endowment (in wei) ; s[1] = memory offset start ; s[2] = size of memory to read
+
+                    const endowment = self.stack.pop().?;
+                    const offset = self.stack.pop().?;
+                    const size = self.stack.pop().?;
+
+                    self.orchestrate = .{ .CREATE = .{
+                        .endowment = endowment,
+                        .offset = offset,
+                        .size = size,
+                    } };
+
+                    return error.Orchestrate;
+                },
+                .CALL, .CALLCODE, .DELEGATECALL => {
                     return error.NotImplemented;
                 },
                 .CREATE2 => {
@@ -1101,11 +1123,6 @@ pub fn New(comptime Environment: type) type {
                         .size = size,
                         .salt = salt,
                     } };
-
-                    // _ = endowment;
-                    // _ = offset;
-                    // _ = size;
-                    // _ = salt;
 
                     // TODO: Return enum with data, double check if we advance PC now or not, other required return data bits host needs for nested EVM execution. Host can then 'resume' this (parent) EVM by setting any environmental data as required, any changes to stack, gas available etc, and then calling execute() again.
                     // TODO: execute() now probably needs a change since IIRC we do a lot of checks like jumpdests and gas etc there which don't need to be done on resumption so that needs to be separated out but for now can probably be wrapped in a (nasty) if block (something something premature optimisation).

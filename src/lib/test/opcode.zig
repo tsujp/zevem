@@ -9,6 +9,7 @@ const zevem = @import("zevem");
 const utils = zevem.utils;
 const EVM = zevem.EVM;
 const Exception = zevem.evm.Exception;
+const Orchestrate = zevem.evm.Orchestrate;
 const DummyEnv = zevem.DummyEnv;
 
 const test_utils = @import("test_utils");
@@ -1235,23 +1236,31 @@ test "basic SWAP" {
     try expectEqual(9, utils.stackOffTop(&s16_a, 16));
 }
 
-// TODO: LOG0, LOG1, LOG2, LOG3, LOG4
-// TODO: CREATE, CALL, CALLCODE, DELEGATECALL
+test "basic LOG" {
+    // TODO: LOG0, LOG1, LOG2, LOG3, LOG4
+    return error.SkipZigTest;
+}
 
-test "basic CREATE2" {
+test "basic CREATE" {
     // Account with 0 endowment, no init-code, and salt of 0.
     var sut: Sut = try .init(.{});
     defer sut.deinit();
 
-    const res = sut.executeBasic("5f5f5f5ff5");
+    const res = sut.executeBasic("5f5f5ff0");
     try expectError(Exception.Orchestrate, res);
-    // TODO: Assert type of Orchestrate is Orchestrate.CREATE2.
+    try expectEqual(Orchestrate.CREATE, std.meta.activeTag(sut.evm.orchestrate.?));
 
-    // CREATE2 tests and implementation is not done yet so mark this test as failing.
+    // CREATE tests and implementation is not done yet so mark this test as failing.
     return error.SkipZigTest;
 }
 
-// TODO: STATICCALL
+test "basic CALL" {
+    return error.SkipZigTest;
+}
+
+test "basic CALLCODE" {
+    return error.SkipZigTest;
+}
 
 test "basic RETURN" {
     // Store 0xff..ff at 0xff, expanding the memory size in the process, then return.
@@ -1261,6 +1270,27 @@ test "basic RETURN" {
     for (vm.return_data) |i| {
         try expectEqual(0xff, i);
     }
+}
+
+test "basic DELEGATECALL" {
+    return error.SkipZigTest;
+}
+
+test "basic CREATE2" {
+    // Account with 0 endowment, no init-code, and salt of 0.
+    var sut: Sut = try .init(.{});
+    defer sut.deinit();
+
+    const res = sut.executeBasic("5f5f5f5ff5");
+    try expectError(Exception.Orchestrate, res);
+    try expectEqual(Orchestrate.CREATE2, std.meta.activeTag(sut.evm.orchestrate.?));
+
+    // CREATE2 tests and implementation is not done yet so mark this test as failing.
+    return error.SkipZigTest;
+}
+
+test "basic STATICCALL" {
+    return error.SkipZigTest;
 }
 
 test "basic REVERT" {
@@ -1274,6 +1304,14 @@ test "basic REVERT" {
     for (sut.evm.return_data) |i| {
         try expectEqual(0xff, i);
     }
+}
+
+test "basic INVALID" {
+    return error.SkipZigTest;
+}
+
+test "basic SELFDESTRUCT" {
+    return error.SkipZigTest;
 }
 
 test "nonsense" {

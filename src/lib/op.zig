@@ -293,7 +293,7 @@ const OpCodes = MakeOpCodes(.{
 
     // //////////////////////////////////////////
     // /////// f0s: System operations
-    .{ .CREATE, .{0xF0}, .TODO_CUSTOM_FEE, null, 3, 1 }, // Create new account with given code.
+    .{ .CREATE, .{0xF0}, .create, null, 3, 1, simpleMemorySize(.{1}, .{2}) }, // Create new account with given code.
     .{ .CALL, .{}, .TODO_CUSTOM_FEE, null, 7, 1 }, // Message-call into given account.
     .{ .CALLCODE, .{}, .TODO_CUSTOM_FEE, null, 7, 1 }, // Message-call into account with alternative account's code.
     .{ .RETURN, .{}, .zero, null, 2, 0 }, // Halt, return output data.
