@@ -66,7 +66,9 @@ CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
 - Add annotations for recently implemented JUMP, JUMPI, and PC.
 :END:
 
-**** Remaining [9/33]
+**** Remaining [12/33]
+
+Not comprehensive, specific final implementation details have their own TODOs.
 
 - [X] ADDRESS
 - [X] CALLER
@@ -93,12 +95,12 @@ CLOCK: [2025-10-21 Tue 20:04]--[2025-10-21 Tue 20:12] =>  0:08
 - [ ] TSTORE
 - [ ] MCOPY
 - [X] SWAP1...SWAP16
-- [ ] LOG0...LOG4
-- [ ] CREATE
+- [X] LOG0...LOG4
+- [X] CREATE
 - [ ] CALL
 - [ ] CALLCODE
 - [ ] DELEGATECALL
-- [ ] CREATE2
+- [X] CREATE2
 - [ ] STATICCALL
 - [ ] SELFDESTRUCT
 
@@ -180,6 +182,21 @@ CLOCK: [2026-01-14 Wed 21:01]--[2026-01-14 Wed 21:50] =>  0:49
 
 - [ ] H.1(326) behaviour
 - [ ] G fee schedule minutia (e.g. G_initcodeword)
+
+**** TODO LOG
+:LOGBOOK:
+CLOCK: [2026-02-15 Sun 19:37]--[2026-02-15 Sun 21:18] =>  1:41
+- LOG notes and skeleton implementation, design decision around where log entries should live (client or zevem) and so until that is decided only pulling items off the stack is implemented.
+- State "TODO"       from              [2026-02-15 Sun 21:14] \\
+  LOG has some design decisions that block it from complete implementation at this time.
+:END:
+
+- [ ] Who owns LOG entry storage, client or zevem? Once known placement of log topic appending can be implemented and then actual tests (and proper behaviour) of LOG can be tested.
+- [ ] G_log
+- [ ] G_logdata
+- [ ] G_logtopic
+- [ ] H.1(326) behaviour
+- [ ] Gas pricing tests, LOG also touches memory
 
 *** Gas
 Ref: [[#h:BF533F42-7A90-4686-8AF8-5443D197FE14][YP Gas]]

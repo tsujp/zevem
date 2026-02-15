@@ -1237,7 +1237,33 @@ test "basic SWAP" {
 }
 
 test "basic LOG" {
-    // TODO: LOG0, LOG1, LOG2, LOG3, LOG4
+    // TODO: These log tests need refinement based on a complete LOG0..LOG4 implementation.
+    // TODO: For all of these need to assert memory contents.
+    // TODO: Memory contents tests should assert attempting to access memory instantiates memory explicitly (and charges appropriately) and also that appropriate memory contents are copied to subsequent log entires. Problem is (see PROJECT.org and LOG implementation) where should that information live (zevem, or client and so accessed via a function).
+
+    // Given above these tests are incredibly, almost uselessly, basic for now.
+
+    // LOG0
+    const l00_a = try basicBytecode("5f5fa0");
+    try expectEqual(0, l00_a.stack.len);
+
+    // LOG1
+    const l01_a = try basicBytecode("5f5f5fa1");
+    try expectEqual(0, l01_a.stack.len);
+
+    // LOG2
+    const l02_a = try basicBytecode("5f5f5f5fa2");
+    try expectEqual(0, l02_a.stack.len);
+
+    // LOG3
+    const l03_a = try basicBytecode("5f5f5f5f5fa3");
+    try expectEqual(0, l03_a.stack.len);
+
+    // LOG4
+    const l04_a = try basicBytecode("5f5f5f5f5f5fa4");
+    try expectEqual(0, l04_a.stack.len);
+
+    // TODO: Until proper coverage these are marked as skipped.
     return error.SkipZigTest;
 }
 

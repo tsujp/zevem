@@ -1084,13 +1084,45 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw try self.nextOp(rom);
                 },
+                .LOG0 => {
+                    // s[0] = memory offset to read from ; s[1] = bytes to read
+
+                    const offset = self.stack.pop().?;
+                    const size = self.stack.pop().?;
+
+                    _ = offset;
+                    _ = size;
+
+                    // TODO: Whose job is it to append logs.. ours I imagine? We need a function from the client for this then...?
+
+                    continue :sw try self.nextOp(rom);
+                },
                 // zig fmt: off
-                inline .LOG0, .LOG1, .LOG2, .LOG3, .LOG4,
+                inline .LOG1, .LOG2, .LOG3, .LOG4,
                 // zig fmt: on
-                => {
-                    // TODO: Implement.
-                    // TODO: Custom gas (do this one first I reckon, it's fairly simple).
-                    return error.NotImplemented;
+                => |op| {
+                    // s[0] = memory offset to read from ; s[1] = bytes to read
+
+                    const offset = self.stack.pop().?;
+                    const size = self.stack.pop().?;
+
+                    _ = offset;
+                    _ = size;
+
+                    // Offset vs LOG0 is count of log topics to append.
+                    var topics = @intFromEnum(op) - @intFromEnum(OpCode.LOG0);
+
+                    // TODO: Whose job is it to append logs.. ours I imagine? We need a function from the client for this then...?
+                    // TODO: Memory access is the same as RETURN/REVERT.
+
+                    // Skeleton implementation just removes the appropriate amount of stack items.
+                    while (topics > 0) {
+                        // Pop topic.
+                        _ = self.stack.pop().?;
+                        topics -= 1;
+                    }
+
+                    continue :sw try self.nextOp(rom);
                 },
                 .CREATE => {
                     // s[0] = endowment (in wei) ; s[1] = memory offset start ; s[2] = size of memory to read
