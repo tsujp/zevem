@@ -198,6 +198,12 @@ CLOCK: [2026-02-15 Sun 19:37]--[2026-02-15 Sun 21:18] =>  1:41
 - [ ] H.1(326) behaviour
 - [ ] Gas pricing tests, LOG also touches memory
 
+*** TODO Precompiles
+:LOGBOOK:
+- State "TODO"       from              [2026-02-15 Sun 21:24] \\
+  Precompile contracts need to be added.
+:END:
+
 *** Gas
 Ref: [[#h:BF533F42-7A90-4686-8AF8-5443D197FE14][YP Gas]]
 
