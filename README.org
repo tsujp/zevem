@@ -65,9 +65,3 @@ Tracy is integrated and available by passing ~-Dtracy=true~ to ~just build~ or ~
 To get you started though: the instrumented application (i.e. zevem) is called the "client", and the Tracy profiler the "server". Instrumented clients gather and send trace information to the server at runtime over a network connection (local or wide, enabling remote profiling). Finally Tracy provides a GUI to explore trace information. The GUI also has an embedded server so it can receive trace information directly if preferred.
 
 The easiest way to get started is to compile zevem with tracing, execute the Tracy capture utility ~capture~, and then execute the zevem artifacts upon which a trace will be captured.
-
-*** AI / LLMs
-
-**Code generated in-part or wholly by LLMs is not allowed**. Contributions are only valuable if they can be maintained and understood. Beyond trivial constructs (which are better suited to snippet completion tools) generating code leads to a lack of understanding about what or why.
-
-Furthermore LLM companies steal others' work for profit which is antithetical to open-source and generally immoral behaviour. If you disagree with this stance please do not contribute, /it is not up for discussion in any form/.
