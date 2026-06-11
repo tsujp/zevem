@@ -1,0 +1,57 @@
+#+TITLE: zevem spec harness
+
+Consumes official [[https://github.com/ethereum/execution-spec-tests][execution-spec-tests]] (EEST) state test fixtures with zevem as the EVM, so zevem runs against real test data instead of only hand-written unit tests.
+
+** Quickstart
+
+#+begin_src sh
+just fetch-fixtures                                  # download the pinned release (state tests only)
+just spec spec/fixtures/v5.4.0/fixtures/state_tests  # consume everything, print the scoreboard
+#+end_src
+
+Useful flags (see ~zig build spec -- --help~ style usage in [[./src/main.zig][main.zig]]): ~--fork=NAME~ (default Cancun), ~--verbose~, ~--max=N~, ~--strict~ (non-zero exit on failure, for CI), ~--evm-trace~ (keep zevem's per-opcode stderr tracing, which is otherwise silenced).
+
+** How it works
+
+A state test fixture declares a pre state, an environment, a transaction, and the expected post state. zevem is /just/ the EVM, so the harness acts as its host:
+
+1. [[./src/fixture.zig][fixture.zig]] parses the fixture JSON (pre/env/transaction vectors/post).
+2. [[./src/state.zig][state.zig]] holds the world state σ: a flat account map with storage.
+3. [[./src/runner.zig][runner.zig]] applies the state transition around EVM execution (YP section 6, Cancun rules): validation, intrinsic gas, nonce and gas purchase, value transfer or contract creation, zevem execution, refunds, priority fee, EIP-161 cleanup.
+4. The post state is verified twice: account-by-account against the fixture's ~post.state~ (precise diffs for debugging), and via the state root against ~post.hash~ using [[./src/trie.zig][trie.zig]] (secure Merkle Patricia Trie over RLP-encoded accounts, [[./src/rlp.zig][rlp.zig]]).
+
+Every entry ends as exactly one of:
+
+- pass :: executed and the post state (accounts and root) matched.
+- pass (rejected) :: the transaction was invalid, the fixture expected that, and the untouched state matched.
+- fail :: a real disagreement, printed with a per-account diff. These are the interesting ones.
+- skip :: something zevem or the harness cannot faithfully execute yet, counted per reason (opcode not implemented, needs CREATE/CALL orchestration, precompile target, blob/set-code transaction, fixture expects logs). Never silently dropped.
+
+** Current scoreboard
+
+Fixture release v5.4.0, fork Cancun, all ~state_tests~ (16,847 Cancun entries of 44,039 total):
+
+#+begin_example
+pass:            846
+pass (rejected): 372
+fail:            69
+skip:            15560
+  tx_type_unsupported: 898
+  evm_unimplemented: 14461
+  evm_orchestrate: 157
+  precompile_unsupported: 20
+  logs_uncollected: 24
+#+end_example
+
+The skip counts double as a progress tracker: implementing an opcode family moves its entries from skip into pass/fail, and the fails come with account-level diffs to debug against.
+
+** Vendored fixtures
+
+[[./src/testdata/][src/testdata/]] holds a handful of test cases extracted verbatim from the pinned release (the source file is named inside each) which zevem executes fully today. They run as part of ~zig build test~ and must always pass; they cover the execution path (stack underflow halts), the validation path (access list intrinsic gas, both accepted and rejected), and therefore also RLP, trie, and state transition correctness end to end.
+
+** Known approximations
+
+- Cancun rules only; post entries for other forks are skipped (run older forks at your own risk via ~--fork~, the transition rules the harness applies stay Cancun's).
+- The gas refund counter is always zero (zevem has no SSTORE/SELFDESTRUCT yet, so nothing can produce refunds).
+- EIP-161 touched-account cleanup only considers the accounts the harness itself can touch (sender, target, coinbase); once inner calls exist this needs the full touched set.
+- ~DummyEnv.getBalance~ returns zero, so BALANCE-dependent tests fail with honest diffs rather than passing by luck. The harness drives ~DummyEnv~ directly because ~evm.New~ is currently only instantiable with it (op.zig's dynamic gas function pointers are typed against ~New(DummyEnv)~).

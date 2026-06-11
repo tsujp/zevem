@@ -53,6 +53,35 @@ pub fn build(b: *std.Build) !void {
     const run_test_cmd = b.addRunArtifact(lib_test);
     test_step.dependOn(&run_test_cmd.step);
 
+    // Specification test harness: consumes execution-spec-tests fixtures with
+    // zevem as the EVM (see spec/README.org).
+    const spec_mod = b.createModule(.{
+        .root_source_file = b.path("spec/src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    spec_mod.addImport("zevem", lib_mod);
+
+    const spec_exe = b.addExecutable(.{
+        .name = "zevem-spec",
+        .root_module = spec_mod,
+    });
+    b.installArtifact(spec_exe);
+
+    const run_spec = b.addRunArtifact(spec_exe);
+    if (b.args) |args| run_spec.addArgs(args);
+
+    const spec_step = b.step("spec", "Consume execution-spec-tests fixtures (args after --)");
+    spec_step.dependOn(&run_spec.step);
+
+    // Harness unit and vendored-fixture tests join `zig build test`.
+    const spec_test = b.addTest(.{
+        .root_module = spec_mod,
+        .filters = test_filters,
+    });
+    const run_spec_test_cmd = b.addRunArtifact(spec_test);
+    test_step.dependOn(&run_spec_test_cmd.step);
+
     var tracy: *std.Build.Dependency = undefined;
     if (want_tracy) {
         tracy = b.dependency("tracy", .{

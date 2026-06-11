@@ -123,7 +123,10 @@ const fee_map = EnumMap(FeeSchedule, u16).init(.{
     .copy = 3,
     .blockhash = 20,
     // TODO: Remove this field later.
-    // .TODO_CUSTOM_FEE = 42069,
+    // NB: Must be present (even as zero) until then: opcodes tagged with it
+    // otherwise panic at the fee lookup in nextOp before their handler can
+    // return NotImplemented / Orchestrate.
+    .TODO_CUSTOM_FEE = 0,
 });
 
 // TODO: Largest actual delta or alpha appears to be 7, so 3 bits, but using 5 to keep things more literal for now (i.e. SWAP and DUP large delta/alpha in yellowpaper).
@@ -503,7 +506,10 @@ fn gasSimpleMemory(self: *EVM, u_i__expanded: u64) Exception!u64 {
     const u_i__change = u_i__expanded - u_i__current;
 
     // 0x1FFFFFFFE0 yoinked from Geth when trying to optimise ludicrous change deltas near u64 max.
-    if (u_i__change > 0x1fffffffe0) {
+    // NB: Geth's ceiling is in _bytes_; ours is a count of words so divide it
+    //     by 32 (giving 0xFFFFFFFF), which also keeps the square below fitting
+    //     within u64 (otherwise `u_i__change * u_i__change` can overflow).
+    if (u_i__change > 0xffffffff) {
         return Exception.OutOfGas;
     }
 
@@ -527,7 +533,9 @@ pub const annotation = MakeOpAnnotations(.{
     .{ .{.BYTE}, .{ .{ "msb_offset", "operand" }, .{"result"} } },
     .{ .{ .SHL, .SHR, .SAR }, .{ .{ "bits", "operand" }, .{"result"} } },
     .{ .{.KECCAK256}, .{ .{ "offset", "length" }, .{"digest"} } },
-    .{ .{.CALLDATASIZE}, .{ .{"size"}, .{} } },
+    // NB: CALLDATASIZE pops nothing; "size" is what it pushes. A delta entry
+    // here panics the annotation printing when the stack is empty.
+    .{ .{.CALLDATASIZE}, .{ .{}, .{"size"} } },
     .{ .{.ORIGIN}, .{ .{}, .{"addr"} } },
     .{ .{.POP}, .{ .{"discard"}, .{} } },
     .{ .{.MLOAD}, .{ .{"offset"}, .{"bytes"} } },
@@ -775,8 +783,16 @@ fn getMemorySizeChange(s: types.Word, f: types.Word, l: types.Word) Exception!u6
         return Exception.MemResizeUInt256Overflow;
     }
 
-    // Treating as as u64, all the while that's true just truncate here since we'll hit out of gas later anyway.
-    return @truncate(@max(s, u_i__after));
+    // NB: Cannot simply @truncate to u64 here: for ludicrous (but not
+    //     u256-overflowing) addresses the truncated word count can wrap to a
+    //     small value, pass the gas check, and then the opcode body's slice
+    //     arithmetic panics. Any word count above the unpayable ceiling (same
+    //     0xFFFFFFFF as in gasSimpleMemory) is out of gas by definition.
+    const max_words = @max(s, u_i__after);
+    if (max_words > 0xffffffff) {
+        return Exception.OutOfGas;
+    }
+    return @intCast(max_words);
     // const res: u64 = @truncate(@max(s, u_i__after));
     // print("calculateMemoryCost s={d}, f={d}, l={d} -- {d}, {d}, {d} -- {d}\n", .{ s, f, l, u_i__before, u_i__after, new_max_address[0], res });
     // return res;

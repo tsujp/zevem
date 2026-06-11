@@ -751,18 +751,26 @@ pub fn New(comptime Environment: type) type {
 
                     // TODO: Since this isn't a zkEVM make sure any side-channel proections are disabled for any calls to hash.
 
-                    // FIXME: Two intCasts to usize for std.mem.items slice, problem or not?
-                    const offset: usize = @intCast(self.stack.pop().?);
-                    const length: usize = @intCast(self.stack.pop().?);
+                    const offset_word = self.stack.pop().?;
+                    const length_word = self.stack.pop().?;
+
+                    // A zero length reads no memory so any offset is legal
+                    // (and the memory sizing function will not have expanded
+                    // for it, making the casts below unsafe); for a non-zero
+                    // length the sizing function has already expanded memory
+                    // to cover the range or returned OutOfGas.
+                    const region: []const u8 = if (length_word == 0) &.{} else blk: {
+                        const offset: usize = @intCast(offset_word);
+                        const length: usize = @intCast(length_word);
+                        break :blk self.mem.items[offset..(offset + length)];
+                    };
 
                     // TODO: Hash directly into the stack instead of this intermediate variable?
                     var digest = [_]u8{0} ** 32;
 
-                    // print("Hashing: {x}\n", .{                        self.mem.items[offset..(offset + length)]});
-
                     std.crypto.hash.sha3.Keccak256.hash(
                         // Note: The `- 1` in YP is wrong.
-                        @ptrCast(self.mem.items[offset..(offset + length)]),
+                        region,
                         &digest,
                         .{},
                     );
@@ -821,7 +829,13 @@ pub fn New(comptime Environment: type) type {
 
                     continue :sw try self.nextOp(rom);
                 },
-                .CALLDATACOPY => {},
+                .CALLDATACOPY => {
+                    // TODO: Implement.
+                    // NB: An empty prong here is not a no-op: with no
+                    //     `continue :sw` the labelled switch simply ends, so
+                    //     execution silently halted as if it succeeded.
+                    return error.NotImplemented;
+                },
                 .CODESIZE => {
                     // Push I_b onto stack.
 
@@ -946,7 +960,16 @@ pub fn New(comptime Environment: type) type {
                 },
                 .JUMP => {
                     // s[0] = new program counter value
-                    const new_pc: @TypeOf(self.pc) = @intCast(self.stack.pop().?);
+                    const target = self.stack.pop().?;
+
+                    // NB: Bound-check against the bytecode before narrowing:
+                    //     a Word-sized target would trap in @intCast, and one
+                    //     past the bytecode would assert inside the bitset.
+                    if (target >= rom.len) {
+                        return Exception.InvalidJumpDestination;
+                    }
+
+                    const new_pc: @TypeOf(self.pc) = @intCast(target);
 
                     if (valid_jumpdests.isSet(new_pc) == false) {
                         return Exception.InvalidJumpDestination;
@@ -958,11 +981,18 @@ pub fn New(comptime Environment: type) type {
                 },
                 .JUMPI => {
                     // s[0] = potential new program counter value ; s[1] = check condition
-                    const new_pc: @TypeOf(self.pc) = @intCast(self.stack.pop().?);
+                    const target = self.stack.pop().?;
                     const condition = self.stack.pop().?;
 
                     // Non-zero condition = set new program counter.
                     if (condition > 0) {
+                        // NB: As in JUMP, bound-check before narrowing.
+                        if (target >= rom.len) {
+                            return Exception.InvalidJumpDestination;
+                        }
+
+                        const new_pc: @TypeOf(self.pc) = @intCast(target);
+
                         if (valid_jumpdests.isSet(new_pc) == false) {
                             return Exception.InvalidJumpDestination;
                         }
@@ -1018,23 +1048,26 @@ pub fn New(comptime Environment: type) type {
                     };
                     defer if (config.use_tracy) zt.deinit();
 
-                    // TODO: YP for PUSH1 to PUSH32 defines function c:
-                    // "The function c ensures the bytes default to zero if they extend past the limits"
-                    // ^^^ Make sure we're doing this. Add a test trying to push outside bytecode range, it should succeed.
-
                     // Offset vs PUSH0 is amount of bytes to read forward and push onto stack as
                     // this instructions operand.
                     const offset = @intFromEnum(op) - @intFromEnum(OpCode.PUSH0);
 
-                    const operand_bytes = rom[self.pc..][0..offset];
+                    // YP for PUSH1 to PUSH32 defines function c: "The function
+                    // c ensures the bytes default to zero if they extend past
+                    // the limits", so an operand truncated by the end of the
+                    // bytecode is padded with trailing zeroes (and slicing rom
+                    // directly would be out of bounds).
+                    var operand_bytes = [_]u8{0} ** 32;
+                    const available = @min(offset, rom.len - self.pc);
+                    @memcpy(operand_bytes[0..available], rom[self.pc..][0..available]);
 
                     // std.mem.readInt does not 0-pad types less than requested size, so we construct and reify the `type` we need then upcast to Word.
                     const operand = @as(Word, std.mem.readInt(
                         @Type(.{ .int = .{
                             .signedness = .unsigned,
-                            .bits = 8 * operand_bytes.len,
+                            .bits = 8 * @as(u16, offset),
                         } }),
-                        operand_bytes,
+                        operand_bytes[0..offset],
                         .big,
                     ));
 
@@ -1174,12 +1207,24 @@ pub fn New(comptime Environment: type) type {
                     const offset = self.stack.pop().?;
                     const size = self.stack.pop().?;
 
-                    self.return_data = try self.alloc.alloc(u8, @truncate(size));
+                    // A size that cannot even be addressed is unpayable
+                    // memory expansion by definition.
+                    const size_usize = std.math.cast(usize, size) orelse return Exception.OutOfGas;
 
-                    if (offset < self.mem.items.len) {
-                        const end = @min(offset + size, self.mem.items.len);
+                    self.return_data = try self.alloc.alloc(u8, size_usize);
 
-                        @memcpy(self.return_data[0..], self.mem.items[@truncate(offset)..end]);
+                    // TODO: Memory expansion (and its gas) should happen ahead
+                    //       of this read per spec; until that lands, the part
+                    //       of the range beyond current memory reads as zeroes
+                    //       (expanded memory is zero-filled anyway, so only
+                    //       the unpaid gas is missing).
+                    @memset(self.return_data, 0);
+
+                    if (offset < self.mem.items.len and size_usize != 0) {
+                        const start: usize = @intCast(offset);
+                        const end: usize = @intCast(@min(offset + size, self.mem.items.len));
+
+                        @memcpy(self.return_data[0 .. end - start], self.mem.items[start..end]);
                     }
 
                     if (op == .REVERT) return Exception.Revert;

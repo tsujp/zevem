@@ -15,3 +15,6 @@ zig-global/
 
 # Zig artifacts while not using dnf for whatever reason.
 .jam/zig-*.tar.*
+
+# Downloaded execution-spec-tests fixture releases (see `just fetch-fixtures`).
+spec/fixtures/
