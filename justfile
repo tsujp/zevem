@@ -55,6 +55,18 @@ test-all: test-debug
 # test-all: (test 'off') (test 'fast') (test 'safe')
 #    # @echo "DONE"
 
+# Download the pinned execution-spec-tests fixture release (state tests only,
+# ~500 MB extracted) into spec/fixtures. See spec/README.org.
+[group: 'spec']
+fetch-fixtures version='v5.4.0':
+    mkdir -p spec/fixtures/{{version}}
+    curl -L https://github.com/ethereum/execution-spec-tests/releases/download/{{version}}/fixtures_stable.tar.gz | tar -xz -C spec/fixtures/{{version}} fixtures/state_tests
+
+# Consume fixtures with the spec harness, e.g.: just spec spec/fixtures/v5.4.0/fixtures/state_tests
+[group: 'spec']
+spec *ARGS:
+    zig build spec --release=fast -- {{ARGS}}
+
 # XXX: Temporary until Zig's fuse-overlayfs d_type woes are sorted.
 [private]
 dt-build *EXTRA_FLAGS:
